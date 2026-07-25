@@ -268,6 +268,16 @@ h2 { font-size: 24px; }
 .bench-player small { margin-top: 2px; color: var(--text-muted); font-size: 10px; }
 .avatar { width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-subtle); font-size: 11px; font-weight: 800; color: var(--text-secondary); }
 .player-time { font: 700 14px/1 "Manrope"; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.bench-time-meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.playtime-indicator {
+  display: inline-grid;
+  place-items: center;
+  min-width: 13px;
+  font: 900 12px/1 "Manrope";
+}
+.playtime-indicator.behind { color: var(--playtime-behind); }
+.playtime-indicator.balanced { color: var(--playtime-balanced); }
+.playtime-indicator.ahead { color: var(--playtime-ahead); }
 .mobile-replace { display: none; }
 
 .field-area { display: grid; grid-template-rows: 74px auto; align-content: start; overflow: hidden; padding-bottom: 16px; }
@@ -352,6 +362,64 @@ h2 { font-size: 24px; }
   .pitch { width: min(calc((100vh - 198px) * .75), calc(100% - 24px)); }
 }
 @media (max-width: 820px) {
+  .topbar { grid-template-columns: 1fr 170px 1fr; padding-inline: 12px; }
+  .desktop-brand { left: 12px; }
+  .desktop-brand strong { display: none; }
+  .desktop-brand img { width: 30px; height: 30px; }
+  .team-score { position: relative; gap: 6px; padding-top: 11px; }
+  .team-score div { display: none; }
+  .team-score b { position: relative; min-width: 20px; font-size: 22px; }
+  .team-score b::before {
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-muted);
+    font: 800 8px/1 "DM Sans";
+    letter-spacing: .14em;
+  }
+  .team-score:not(.away) b::before { content: "KOTI"; }
+  .team-score.away b::before { content: "VIERAS"; }
+  .team-score button { width: 28px; height: 28px; font-size: 17px; }
+  .settings-trigger { right: 12px; width: 34px; height: 34px; padding: 7px; border-radius: 10px; }
+  .desktop-theme-trigger { right: 54px; width: 34px; height: 34px; border-radius: 10px; font-size: 18px; }
+  .workspace {
+    height: auto;
+    min-height: calc(100vh - 92px);
+    grid-template-columns: 150px minmax(0, 1fr) 150px;
+    gap: 8px;
+    padding: 10px;
+    align-items: start;
+  }
+  .side-panel { width: auto; min-height: 260px; padding: 12px; }
+  .side-panel h1, .side-panel h2 { font-size: 18px; }
+  .helper { margin-block: 8px 10px; font-size: 11px; }
+  .bench-player { grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 7px; }
+  .bench-player .bench-time-meta { grid-column: 2; justify-content: flex-start; }
+  .bench-player .player-time { font-size: 11px; }
+  .bench-player small { display: none; }
+  .avatar { width: 22px; height: 22px; font-size: 9px; }
+  .count { min-width: 26px; height: 26px; font-size: 12px; }
+  .details { grid-column: auto; width: auto; min-height: 260px; }
+  .details .big-time { font-size: 28px; }
+  .details .goal-button, .details .secondary { padding-inline: 6px; font-size: 11px; }
+  .field-area { padding-bottom: 10px; }
+  .field-toolbar { padding: 12px; }
+  .field-toolbar > div:first-child { width: 100%; justify-content: space-between; gap: 6px; }
+  .formation-switch button { padding: 6px 9px; font-size: 12px; }
+  .pitch { width: min(calc((100svh - 225px) * .75), calc(100% - 16px)); }
+  .player-card { width: 64px; min-height: 50px; padding: 5px 4px; border-radius: 10px; }
+  .player-card strong { font-size: 11px; }
+  .player-time-on-field { font-size: 11px; }
+  .role, .player-meta em { font-size: 8px; }
+  .player-meta { gap: 3px; }
+  .playtime-indicator { min-width: 9px; font-size: 9px; }
+}
+@media (max-width: 1120px) and (min-width: 821px) {
+  .desktop-brand strong { display: none; }
+  .desktop-brand img { width: 30px; height: 30px; }
+}
+@media (max-width: 720px) {
   .app-shell { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .desktop-brand,
   .new-match-trigger,
@@ -390,20 +458,6 @@ h2 { font-size: 24px; }
   .mobile-nav img { width: 21px; height: 21px; filter: brightness(0) invert(1); }
   .mobile-nav-plus { font: 800 25px/20px "Manrope"; }
   .theme-icon { font: 700 22px/20px "Manrope"; }
-  .workspace {
-    height: auto;
-    min-height: calc(100vh - 92px);
-    grid-template-columns: 200px minmax(0, 1fr);
-    align-items: start;
-  }
-  .pitch { width: min(calc((100svh - 265px) * .75), calc(100% - 24px)); }
-  .details { grid-column: 1 / -1; width: 100%; min-height: auto; }
-}
-@media (max-width: 1120px) and (min-width: 821px) {
-  .desktop-brand strong { display: none; }
-  .desktop-brand img { width: 30px; height: 30px; }
-}
-@media (max-width: 820px) {
   .topbar { height: 78px; padding: 8px 12px; }
   .team-score {
     position: relative;
@@ -536,7 +590,7 @@ h2 { font-size: 24px; }
   border-color: var(--border-default);
 }
 [data-theme="dark"] .topbar { border-bottom-color: var(--border-default); }
-[data-theme="dark"] .topbar { background: rgba(25, 35, 31, .96); backdrop-filter: blur(10px); }
+[data-theme="dark"] .topbar { background: #19231f; }
 [data-theme="dark"] .formation-switch .active {
   border: 1px solid rgba(118, 170, 255, .42);
   box-shadow: var(--active-glow);
@@ -706,6 +760,75 @@ h2 { font-size: 24px; }
 .empty-history { margin: 0; padding: 14px; border-radius: 10px; background: #f6f7f5; color: #75807b; font-size: 12px; }
 .success-note { margin: 0 0 9px; color: #2e6b50; font-size: 12px; font-weight: 700; }
 
+[data-theme="dark"] .settings-modal,
+[data-theme="dark"] .new-match-modal,
+[data-theme="dark"] .confirm-modal {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+[data-theme="dark"] .settings-header,
+[data-theme="dark"] .player-add,
+[data-theme="dark"] .settings-section {
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .team-list button,
+[data-theme="dark"] .formation-editor-list > div,
+[data-theme="dark"] .history-list article,
+[data-theme="dark"] .attendance-list label {
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .settings-modal input,
+[data-theme="dark"] .new-match-modal input,
+[data-theme="dark"] .new-match-modal select {
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .team-list button.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+[data-theme="dark"] .close-button,
+[data-theme="dark"] .venue-switch,
+[data-theme="dark"] .empty-history {
+  background: #26342e;
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .venue-switch button { color: var(--text-muted); }
+[data-theme="dark"] .venue-switch button.active {
+  background: #34443d;
+  color: var(--text-primary);
+  box-shadow: var(--active-glow);
+}
+[data-theme="dark"] .team-list span,
+[data-theme="dark"] .history-list article span,
+[data-theme="dark"] .section-hint,
+[data-theme="dark"] .attendance-heading span {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .close-button,
+[data-theme="dark"] .team-name-row button,
+[data-theme="dark"] .add-row button,
+[data-theme="dark"] .history-actions button,
+[data-theme="dark"] .history-list button {
+  background: #315b4c;
+  color: #f5f8f6;
+}
+[data-theme="dark"] .danger {
+  background: #4a2b25 !important;
+  color: #ffc0b2 !important;
+  border-color: #86564b !important;
+}
+[data-theme="dark"] .danger.destructive-filled {
+  background: var(--danger-action) !important;
+  color: #fff !important;
+  border-color: #d87564 !important;
+}
+
 @media (max-width: 700px) {
   .modal-backdrop {
     place-items: start center;
@@ -729,7 +852,7 @@ h2 { font-size: 24px; }
   .attendance-list { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 720px) {
   .topbar { grid-template-columns: 1fr 151px 1fr; }
   .pregame-workspace { min-height: calc(100vh - 78px - 76px); padding: 16px; }
   .pregame-card { padding: 28px 20px; }

@@ -40,6 +40,17 @@ export function MatchWorkspace({
   onMarkGoal,
   onRemoveGoal,
 }: MatchWorkspaceProps) {
+  const playtimeIndicator = (playerId: PlayerId) => {
+    const { state } = comparePlaytime(minutes[playerId] || 0, averageSeconds);
+    const symbol = state === "behind" ? "↓" : state === "ahead" ? "↑" : "≈";
+    const label = state === "behind"
+      ? "Alle aktiivisten pelaajien keskiarvon"
+      : state === "ahead"
+        ? "Yli aktiivisten pelaajien keskiarvon"
+        : "Lähellä aktiivisten pelaajien keskiarvoa";
+    return <span className={`playtime-indicator ${state}`} title={label} aria-label={label}>{symbol}</span>;
+  };
+
   return (
     <section className="workspace">
       <aside className="side-panel bench-panel">
@@ -61,7 +72,10 @@ export function MatchWorkspace({
             >
               <span className="avatar">{player.number}</span>
               <span><strong>{player.name}</strong><small>Valmiina vaihtoon</small></span>
-              <span className="player-time">{formatTime(minutes[player.id] || 0)}</span>
+              <span className="bench-time-meta">
+                {playtimeIndicator(player.id)}
+                <span className="player-time">{formatTime(minutes[player.id] || 0)}</span>
+              </span>
             </button>
           ))}
         </div>
@@ -73,7 +87,8 @@ export function MatchWorkspace({
                 const player = playersById[id];
                 return player && (
                   <button key={id} onClick={() => onSelectField(index)}>
-                    <strong>{player.name}</strong><span>{slots[index][0]} · {formatTime(minutes[id] || 0)}</span>
+                    <strong>{player.name}</strong>
+                    <span>{playtimeIndicator(id)} {slots[index][0]} · {formatTime(minutes[id] || 0)}</span>
                   </button>
                 );
               })}
@@ -117,7 +132,11 @@ export function MatchWorkspace({
                 onClick={() => onSelectField(index)}
                 aria-label={`${player.name}, paikka ${role}`}
               >
-                <span className="player-meta"><span className="role">{role}</span><em>{goals[player.id] || 0} <span aria-hidden="true">⚽</span></em></span>
+                <span className="player-meta">
+                  <span className="role">{role}</span>
+                  {playtimeIndicator(player.id)}
+                  <em>{goals[player.id] || 0} <span aria-hidden="true">⚽</span></em>
+                </span>
                 <strong>{player.name}</strong>
                 <span className="player-time-on-field">{formatTime(minutes[player.id] || 0)}</span>
               </button>
