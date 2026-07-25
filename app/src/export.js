@@ -5,7 +5,7 @@ const BORDER = "D9E2F1";
 export async function buildMatchXlsx(match, teamName) {
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Vaihtopeli";
+  workbook.creator = "Peluutin";
   workbook.created = new Date(match.playedAt);
 
   const sheet = workbook.addWorksheet("Ottelu", {

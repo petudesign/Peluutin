@@ -324,7 +324,7 @@ export function App() {
     return (
       <main className="onboarding-shell">
         <section className="onboarding-card">
-          <span className="onboarding-mark" aria-hidden="true">VP</span>
+          <img className="onboarding-logo" src="/assets/peluutin-logo.svg" alt="Peluutin" />
           <span className="eyebrow">TERVETULOA</span>
           <h1>Aloitetaan joukkueesta</h1>
           <p>Luo ensimmäinen joukkue. Seuraavaksi pääset lisäämään pelaajat ja valitsemaan muodostelmat.</p>
