@@ -74,6 +74,14 @@ export function App() {
   }, [teams]);
 
   useEffect(() => {
+    const modalOpen = settingsOpen || newMatchOpen || endMatchOpen || deleteTeamOpen;
+    if (!modalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [settingsOpen, newMatchOpen, endMatchOpen, deleteTeamOpen]);
+
+  useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => {
       setSeconds((value) => value + 1);
@@ -152,10 +160,26 @@ export function App() {
   };
 
   const deleteTeam = () => {
-    if (teams.length === 1) return;
     const remaining = teams.filter((team) => team.id !== teamId);
     setTeams(remaining);
-    activateTeam(remaining[0]);
+    if (remaining.length) {
+      activateTeam(remaining[0]);
+    } else {
+      setTeamId("");
+      setTeamNameDraft("");
+      setLineup([]);
+      setActivePlayerIds([]);
+      setActivePlayerDraft([]);
+      setMinutes({});
+      setGoals({});
+      setSelected(null);
+      setSeconds(0);
+      setScore([0, 0]);
+      setRunning(false);
+      setMatchEnded(false);
+      setMatchCreated(false);
+      setSettingsOpen(false);
+    }
     setDeleteTeamOpen(false);
   };
 
@@ -565,7 +589,7 @@ export function App() {
                   {teamNameDraft.trim() !== homeTeam.name && (
                     <button onClick={() => updateCurrentTeam((team) => ({ ...team, name: teamNameDraft.trim() || team.name }))}>Tallenna nimi</button>
                   )}
-                  <button className="danger destructive-filled" disabled={teams.length === 1} onClick={() => setDeleteTeamOpen(true)}>Poista joukkue</button>
+                  <button className="danger destructive-filled" onClick={() => setDeleteTeamOpen(true)}>Poista joukkue</button>
                 </div>
                 <div className="player-editor-list">
                   {roster.map((player) => (
