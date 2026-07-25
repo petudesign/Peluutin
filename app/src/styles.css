@@ -87,21 +87,23 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d8d8d2;
   background: #fff; color: #31423c; font-size: 20px; cursor: pointer;
 }
+.team-score button:disabled { opacity: .35; cursor: not-allowed; }
 .team-score button:last-child { background: var(--primary); border-color: var(--primary); color: white; }
 .settings-trigger {
   position: absolute;
   top: 50%;
   right: 28px;
   transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-  padding: 7px;
-  border: 1px solid #dce1dd;
-  border-radius: 10px;
-  background: #fff;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border: 1px solid #17324d;
+  border-radius: 12px;
+  background: #17324d;
   cursor: pointer;
+  box-shadow: 0 7px 22px rgba(18,38,58,.18);
 }
-.settings-trigger img { display: block; width: 100%; height: 100%; }
+.settings-trigger img { display: block; width: 100%; height: 100%; filter: brightness(0) invert(1); }
 .new-match-trigger {
   position: fixed;
   right: 24px;
@@ -110,10 +112,10 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 14px;
+  padding: 12px 17px;
   border: 0;
   border-radius: 12px;
-  background: #29443a;
+  background: #17324d;
   color: #fff;
   font-weight: 700;
   cursor: pointer;
@@ -121,6 +123,47 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
 }
 .new-match-trigger span { font: 700 21px/1 "Manrope"; }
 .mobile-nav { display: none; }
+.no-match-status { color: #52615b; font-size: 16px !important; white-space: nowrap; }
+
+.pregame-workspace {
+  min-height: calc(100vh - 92px);
+  padding: 24px;
+  display: grid;
+  place-items: center;
+}
+.pregame-card {
+  width: min(520px, 100%);
+  padding: 34px;
+  border: 1px solid #dfded8;
+  border-radius: 22px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 14px 42px rgba(30,49,42,.09);
+}
+.pregame-icon {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font: 800 24px/1 "Manrope";
+}
+.pregame-card h1 { margin-top: 7px; font-size: 28px; }
+.pregame-card p { margin: 13px auto 22px; max-width: 430px; color: #66716d; font-size: 14px; line-height: 1.55; }
+.pregame-card > button {
+  min-width: 190px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pregame-card > .pregame-secondary { margin-left: 8px; border: 1px solid #d8dcd8; background: #fff; color: #29443a; }
 .away { justify-content: flex-end; flex-direction: row-reverse; text-align: right; padding-left: 8px; }
 .away div { margin: 0 0 0 10px; }
 .eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: #6b7772; }
@@ -517,4 +560,9 @@ h2 { font-size: 24px; }
 
 @media (max-width: 720px) {
   .topbar { grid-template-columns: 1fr 151px 1fr; }
+  .pregame-workspace { min-height: calc(100vh - 78px - 76px); padding: 16px; }
+  .pregame-card { padding: 28px 20px; }
+  .pregame-card h1 { font-size: 24px; }
+  .pregame-card > button { width: 100%; }
+  .pregame-card > .pregame-secondary { margin: 8px 0 0; }
 }

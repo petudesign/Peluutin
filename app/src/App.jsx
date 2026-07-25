@@ -34,6 +34,7 @@ export function App() {
   const [endMatchOpen, setEndMatchOpen] = useState(false);
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false);
   const [matchEnded, setMatchEnded] = useState(false);
+  const [matchCreated, setMatchCreated] = useState(false);
   const [opponent, setOpponent] = useState("");
   const [opponentDraft, setOpponentDraft] = useState("");
   const [venue, setVenue] = useState("home");
@@ -99,6 +100,7 @@ export function App() {
     setScore([0, 0]);
     setRunning(false);
     setMatchEnded(false);
+    setMatchCreated(false);
   };
 
   const selectField = (index) => {
@@ -282,6 +284,7 @@ export function App() {
     setSelected(null);
     setRunning(false);
     setMatchEnded(false);
+    setMatchCreated(true);
     setHistoryNotice("");
     setNewMatchOpen(false);
   };
@@ -318,13 +321,13 @@ export function App() {
       <header className="topbar">
         <div className="team-score">
           <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
-          <button aria-label="Vähennä kotijoukkueen maalia" onClick={() => changeScore(0, -1)}>−</button>
+          <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => changeScore(0, -1)}>−</button>
           <b>{score[0]}</b>
-          <button aria-label="Lisää kotijoukkueen maali" onClick={() => changeScore(0, 1)}>+</button>
+          <button disabled={!matchCreated} aria-label="Lisää kotijoukkueen maali" onClick={() => changeScore(0, 1)}>+</button>
         </div>
         <div className="match-clock">
-          <span>{formatTime(seconds)}</span>
-          {matchEnded ? (
+          {matchCreated ? <span>{formatTime(seconds)}</span> : <span className="no-match-status">Ei aktiivista peliä</span>}
+          {!matchCreated ? null : matchEnded ? (
             <button onClick={openNewMatch}>Uusi peli</button>
           ) : (
             <div className="clock-actions">
@@ -337,9 +340,9 @@ export function App() {
         </div>
         <div className="team-score away">
           <div><span className="eyebrow">VIERAS</span><strong>{awayName || "Vierasjoukkue"}</strong></div>
-          <button aria-label="Vähennä vierasjoukkueen maalia" onClick={() => changeScore(1, -1)}>−</button>
+          <button disabled={!matchCreated} aria-label="Vähennä vierasjoukkueen maalia" onClick={() => changeScore(1, -1)}>−</button>
           <b>{score[1]}</b>
-          <button aria-label="Lisää vierasjoukkueen maali" onClick={() => changeScore(1, 1)}>+</button>
+          <button disabled={!matchCreated} aria-label="Lisää vierasjoukkueen maali" onClick={() => changeScore(1, 1)}>+</button>
         </div>
         <button className="new-match-trigger" onClick={openNewMatch}><span aria-hidden="true">+</span> Uusi peli</button>
         <button className="settings-trigger" aria-label="Asetukset" onClick={() => setSettingsOpen(true)}>
@@ -347,7 +350,22 @@ export function App() {
         </button>
       </header>
 
-      <section className="workspace">
+      {!matchCreated ? (
+        <section className="pregame-workspace">
+          <div className="pregame-card">
+            <span className="pregame-icon" aria-hidden="true">{roster.length ? "✓" : "+"}</span>
+            <span className="eyebrow">SEURAAVA VAIHE</span>
+            <h1>{roster.length ? "Luo joukkueelle peli" : "Lisää joukkueen pelaajat"}</h1>
+            <p>{roster.length
+              ? "Valitse vastustaja, koti- tai vieraspeli sekä tämän ottelun aktiiviset pelaajat ennen kellon käynnistämistä."
+              : `${homeTeam.name} on luotu. Lisää seuraavaksi pelaajat, jotta voit muodostaa kokoonpanon ja aloittaa pelin.`}</p>
+            <button onClick={roster.length ? openNewMatch : () => setSettingsOpen(true)}>
+              {roster.length ? "Luo uusi peli" : "Avaa pelaaja-asetukset"}
+            </button>
+            {roster.length > 0 && <button className="pregame-secondary" onClick={() => setSettingsOpen(true)}>Muokkaa joukkuetta</button>}
+          </div>
+        </section>
+      ) : <section className="workspace">
         <aside className="side-panel bench-panel">
           <div className="panel-heading">
             <div><span className="eyebrow">KOKOONPANO</span><h1>Vaihtopenkki</h1></div>
@@ -428,7 +446,7 @@ export function App() {
             </>
           ) : <p className="empty-copy">Näet tästä peliajan ja voit merkitä maalin.</p>}
         </aside>
-      </section>
+      </section>}
 
       <nav className="mobile-nav" aria-label="Päätoiminnot">
         <button onClick={openNewMatch}>
