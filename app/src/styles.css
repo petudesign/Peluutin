@@ -33,11 +33,11 @@
   --text-muted: #aebbb5;
   --border-default: #3a4942;
   --primary-soft: #183968;
-  --primary: #2f6fd6;
-  --primary-hover: #255eb7;
+  --primary: #285ba7;
+  --primary-hover: #326bb9;
   --primary-ring: rgba(106, 157, 244, .42);
-  --danger-action: #b84b3a;
-  --nav-background: rgba(36, 74, 104, .98);
+  --danger-action: #9f4636;
+  --nav-background: rgba(28, 53, 71, .98);
   --active-glow: 0 0 0 1px rgba(118, 170, 255, .34), 0 0 14px rgba(67, 132, 239, .28);
   --playtime-behind: #ff9a84;
   --playtime-balanced: #c7d0cc;
@@ -615,10 +615,30 @@ h2 { font-size: 24px; }
 }
 [data-theme="dark"] .settings-trigger,
 [data-theme="dark"] .new-match-trigger {
-  background: #244a68;
-  border-color: #315f82;
+  background: #1c3547;
+  border-color: #36566c;
 }
 [data-theme="dark"] .settings-trigger { box-shadow: 0 5px 16px rgba(8, 19, 28, .34); }
+[data-theme="dark"] .match-clock button:not(.pause, .end-match-button):hover,
+[data-theme="dark"] .goal-button:hover {
+  background: var(--primary-hover);
+}
+[data-theme="dark"] .match-clock .end-match-button:hover,
+[data-theme="dark"] .danger-confirm:hover,
+[data-theme="dark"] .danger.destructive-filled:hover {
+  background: #b0523f !important;
+  border-color: #b0523f !important;
+}
+[data-theme="dark"] .new-match-trigger:hover,
+[data-theme="dark"] .settings-trigger:hover {
+  background: #25475e;
+}
+[data-theme="dark"] .mobile-nav {
+  box-shadow: 0 -6px 18px rgba(3, 10, 14, .28);
+}
+[data-theme="dark"] .mobile-nav button:hover {
+  background: rgba(255, 255, 255, .07);
+}
 [data-theme="dark"] .team-score button,
 [data-theme="dark"] .formation-switch,
 [data-theme="dark"] input {
