@@ -14,6 +14,8 @@ interface MatchHeaderProps {
   onEndMatch: () => void;
   onNewMatch: () => void;
   onOpenSettings: () => void;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
 }
 
 export function MatchHeader({
@@ -30,6 +32,8 @@ export function MatchHeader({
   onEndMatch,
   onNewMatch,
   onOpenSettings,
+  theme,
+  onToggleTheme,
 }: MatchHeaderProps) {
   return (
     <header className="topbar">
@@ -65,6 +69,13 @@ export function MatchHeader({
       <button className="new-match-trigger" onClick={onNewMatch}><span aria-hidden="true">+</span> Uusi peli</button>
       <button className="settings-trigger" aria-label="Asetukset" onClick={onOpenSettings}>
         <img src="/assets/settings-svgrepo-com.svg" alt="" />
+      </button>
+      <button
+        className="desktop-theme-trigger"
+        aria-label={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"}
+        onClick={onToggleTheme}
+      >
+        <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
       </button>
     </header>
   );

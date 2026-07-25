@@ -25,6 +25,7 @@ const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 export function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
   const [onboardingTeamName, setOnboardingTeamName] = useState("");
@@ -65,10 +66,14 @@ export function App() {
   const activeFormation = teamFormations.find((item) => item.id === formation) || teamFormations[0];
   const slots = activeFormation?.slots || defaultFormations[0].slots;
   const selectedPlayer = selected ? byId[selected.id] : null;
-  const playedValues = activeRoster.map((player) => minutes[player.id] || 0);
-  const playRange = playedValues.length
-    ? `${Math.round(Math.min(...playedValues) / 60)}–${Math.round(Math.max(...playedValues) / 60)} min`
-    : "0–0 min";
+  const averageSeconds = activeRoster.length
+    ? activeRoster.reduce((total, player) => total + (minutes[player.id] || 0), 0) / activeRoster.length
+    : 0;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("peluutin-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     matchRepository.saveTeams(teams);
@@ -408,6 +413,8 @@ export function App() {
         onEndMatch={() => setEndMatchOpen(true)}
         onNewMatch={openNewMatch}
         onOpenSettings={() => setSettingsOpen(true)}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
       {!matchCreated ? (
@@ -429,7 +436,7 @@ export function App() {
           selectedPlayer={selectedPlayer || null}
           minutes={minutes}
           goals={goals}
-          playRange={playRange}
+          averageSeconds={averageSeconds}
           formatTime={formatTime}
           onSelect={setSelected}
           onSelectField={selectField}
@@ -439,7 +446,12 @@ export function App() {
         />
       )}
 
-      <MobileNav onNewMatch={openNewMatch} onOpenSettings={() => setSettingsOpen(true)} />
+      <MobileNav
+        onNewMatch={openNewMatch}
+        onOpenSettings={() => setSettingsOpen(true)}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+      />
 
       {newMatchOpen && (
         <NewMatchDialog

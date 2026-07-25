@@ -1,4 +1,5 @@
 import type { Formation, FormationSlot, Player, PlayerId, SelectedPlayer } from "../../types";
+import { comparePlaytime } from "./matchLogic";
 
 interface MatchWorkspaceProps {
   bench: Player[];
@@ -11,7 +12,7 @@ interface MatchWorkspaceProps {
   selectedPlayer: Player | null;
   minutes: Record<PlayerId, number>;
   goals: Record<PlayerId, number>;
-  playRange: string;
+  averageSeconds: number;
   formatTime: (seconds: number) => string;
   onSelect: (selected: SelectedPlayer | null) => void;
   onSelectField: (index: number) => void;
@@ -31,7 +32,7 @@ export function MatchWorkspace({
   selectedPlayer,
   minutes,
   goals,
-  playRange,
+  averageSeconds,
   formatTime,
   onSelect,
   onSelectField,
@@ -77,7 +78,6 @@ export function MatchWorkspace({
             </div>
           </div>
         )}
-        <div className="fairness"><span>Peliajat</span><strong>{playRange}</strong></div>
       </aside>
 
       <section className="field-area">
@@ -130,6 +130,15 @@ export function MatchWorkspace({
         {selectedPlayer ? (
           <>
             <div className="big-time">{formatTime(minutes[selectedPlayer.id] || 0)}</div>
+            {(() => {
+              const { state, differenceSeconds } = comparePlaytime(minutes[selectedPlayer.id] || 0, averageSeconds);
+              const label = state === "behind"
+                ? `↓ ${formatTime(Math.abs(differenceSeconds))} alle aktiivisten pelaajien keskiarvon`
+                : state === "ahead"
+                  ? `↑ ${formatTime(Math.abs(differenceSeconds))} yli aktiivisten pelaajien keskiarvon`
+                  : "≈ Lähellä aktiivisten pelaajien keskiarvoa";
+              return <p className={`playtime-comparison ${state}`}>{label}</p>;
+            })()}
             <p className="muted">Pelaaja voidaan vaihtaa vapaasti mille tahansa paikalle.</p>
             <div className="goal-actions">
               <button className="goal-button" onClick={() => onMarkGoal(selectedPlayer.id)}>Merkitse maali</button>

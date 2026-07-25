@@ -24,7 +24,7 @@ npm run check
 - `src/storage.ts` validates untrusted data read from browser storage.
 - `src/export.ts` creates Excel match reports.
 
-See [Architecture](../docs/architecture.md) and [Data model](../docs/data-model.md) for more detail.
+See [Architecture](../docs/architecture.md), [Data model](../docs/data-model.md) and [Design system](../docs/design-system.md) for more detail.
 
 ## Persistence and privacy
 

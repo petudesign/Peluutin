@@ -17,3 +17,14 @@ export function changePlayerGoal(
     score: nextScore,
   };
 }
+
+export type PlaytimeComparisonState = "behind" | "balanced" | "ahead";
+
+export function comparePlaytime(playerSeconds: number, averageSeconds: number): {
+  state: PlaytimeComparisonState;
+  differenceSeconds: number;
+} {
+  const differenceSeconds = Math.round(playerSeconds - averageSeconds);
+  const state = differenceSeconds < -30 ? "behind" : differenceSeconds > 30 ? "ahead" : "balanced";
+  return { state, differenceSeconds };
+}
