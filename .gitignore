@@ -1,0 +1,11 @@
+app/node_modules/
+app/dist/
+app/outputs/
+app/.tmp-spreadsheet/
+app/.openai/
+app/implementation-*.png
+app/design-*.png
+app/design-qa.md
+app/AGENTS.md
+app/settings-svgrepo-com.svg
+app/scripts/create-export-sample.mjs
