@@ -19,8 +19,18 @@ const loadTeams = () => {
   }
 };
 
+const loadActiveMatch = () => {
+  try {
+    return JSON.parse(localStorage.getItem("peluutin-active-match"));
+  } catch {
+    return null;
+  }
+};
+
 const initialTeams = loadTeams();
-const initialTeam = initialTeams[0] || null;
+const initialActiveMatch = loadActiveMatch();
+const initialTeam = initialTeams.find((team) => team.id === initialActiveMatch?.teamId) || initialTeams[0] || null;
+const restoredMatch = initialActiveMatch?.teamId === initialTeam?.id ? initialActiveMatch : null;
 
 const formatTime = (seconds) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -34,26 +44,26 @@ export function App() {
   const [endMatchOpen, setEndMatchOpen] = useState(false);
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false);
   const [matchEnded, setMatchEnded] = useState(false);
-  const [matchCreated, setMatchCreated] = useState(false);
-  const [opponent, setOpponent] = useState("");
+  const [matchCreated, setMatchCreated] = useState(Boolean(restoredMatch));
+  const [opponent, setOpponent] = useState(restoredMatch?.opponent || "");
   const [opponentDraft, setOpponentDraft] = useState("");
-  const [venue, setVenue] = useState("home");
+  const [venue, setVenue] = useState(restoredMatch?.venue || "home");
   const [venueDraft, setVenueDraft] = useState("home");
-  const [activePlayerIds, setActivePlayerIds] = useState(initialTeam?.players.map((player) => player.id) || []);
+  const [activePlayerIds, setActivePlayerIds] = useState(restoredMatch?.activePlayerIds || initialTeam?.players.map((player) => player.id) || []);
   const [activePlayerDraft, setActivePlayerDraft] = useState(initialTeam?.players.map((player) => player.id) || []);
   const [teamNameDraft, setTeamNameDraft] = useState(initialTeam?.name || "");
   const [newTeamName, setNewTeamName] = useState("");
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newFormationName, setNewFormationName] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
-  const [formation, setFormation] = useState(initialTeam?.formations?.[0]?.id || defaultFormations[0].id);
-  const [lineup, setLineup] = useState(initialTeam?.players.slice(0, 8).map((p) => p.id) || []);
+  const [formation, setFormation] = useState(restoredMatch?.formation || initialTeam?.formations?.[0]?.id || defaultFormations[0].id);
+  const [lineup, setLineup] = useState(restoredMatch?.lineup || initialTeam?.players.slice(0, 8).map((p) => p.id) || []);
   const [selected, setSelected] = useState(null);
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(restoredMatch?.seconds || 0);
   const [running, setRunning] = useState(false);
-  const [score, setScore] = useState([0, 0]);
-  const [minutes, setMinutes] = useState(Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
-  const [goals, setGoals] = useState({});
+  const [score, setScore] = useState(restoredMatch?.score || [0, 0]);
+  const [minutes, setMinutes] = useState(restoredMatch?.minutes || Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
+  const [goals, setGoals] = useState(restoredMatch?.goals || {});
 
   const homeTeam = teams.find((team) => team.id === teamId) || teams[0] || null;
   const roster = homeTeam?.players || [];
@@ -72,6 +82,25 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("vaihtopeli-teams", JSON.stringify(teams));
   }, [teams]);
+
+  useEffect(() => {
+    if (!matchCreated || matchEnded || !homeTeam) {
+      localStorage.removeItem("peluutin-active-match");
+      return;
+    }
+    localStorage.setItem("peluutin-active-match", JSON.stringify({
+      teamId: homeTeam.id,
+      opponent,
+      venue,
+      activePlayerIds,
+      formation,
+      lineup,
+      seconds,
+      score,
+      minutes,
+      goals,
+    }));
+  }, [matchCreated, matchEnded, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals]);
 
   useEffect(() => {
     const modalOpen = settingsOpen || newMatchOpen || endMatchOpen || deleteTeamOpen;
@@ -343,6 +372,10 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
+        <div className="desktop-brand" aria-label="Peluutin">
+          <img src="/favicon.svg" alt="" />
+          <strong>Peluutin</strong>
+        </div>
         <div className="team-score">
           <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
           <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => changeScore(0, -1)}>−</button>
@@ -473,6 +506,10 @@ export function App() {
       </section>}
 
       <nav className="mobile-nav" aria-label="Päätoiminnot">
+        <div className="mobile-nav-brand" aria-label="Peluutin">
+          <img src="/favicon.svg" alt="" />
+          <span>Peluutin</span>
+        </div>
         <button onClick={openNewMatch}>
           <span className="mobile-nav-plus" aria-hidden="true">+</span>
           <span>Uusi peli</span>
