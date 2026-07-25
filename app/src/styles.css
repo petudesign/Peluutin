@@ -138,13 +138,13 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   width: 40px;
   height: 40px;
   padding: 9px;
-  border: 1px solid #17324d;
+  border: 1px solid var(--border-default);
   border-radius: 12px;
-  background: #17324d;
+  background: var(--surface-panel);
   cursor: pointer;
-  box-shadow: 0 7px 22px rgba(18,38,58,.18);
+  box-shadow: 0 5px 16px rgba(18,38,58,.12);
 }
-.settings-trigger img { display: block; width: 100%; height: 100%; filter: brightness(0) invert(1); }
+.settings-trigger img { display: block; width: 100%; height: 100%; }
 .desktop-theme-trigger {
   position: absolute;
   top: 50%;
@@ -354,7 +354,8 @@ h2 { font-size: 24px; }
   h1, h2 { font-size: 20px; }
   .helper { font-size: 12px; }
   .bench-player { grid-template-columns: 24px minmax(0, 1fr); padding: 8px; gap: 7px; }
-  .bench-player .player-time { grid-column: 2; font-size: 12px; }
+  .bench-player .bench-time-meta { grid-column: 2; justify-content: flex-start; }
+  .bench-player .player-time { font-size: 12px; }
   .avatar { width: 24px; height: 24px; }
   .side-panel { min-height: 280px; }
   .details { grid-column: auto; width: auto; }
@@ -599,7 +600,14 @@ h2 { font-size: 24px; }
   box-shadow: var(--active-glow);
 }
 [data-theme="dark"] .player-card.selected {
-  box-shadow: var(--active-glow), 0 6px 16px rgba(2, 8, 5, .48);
+  border-color: #8ab5ff;
+  background: #3b4b44;
+  box-shadow: 0 0 0 2px rgba(138, 181, 255, .82), 0 0 18px rgba(67, 132, 239, .42), 0 6px 16px rgba(2, 8, 5, .48);
+}
+[data-theme="dark"] .player-card.allowed {
+  border-color: #f3bd55;
+  background: #3b4941;
+  box-shadow: 0 0 0 2px rgba(243, 189, 85, .72), 0 0 16px rgba(243, 167, 18, .34), 0 6px 16px rgba(2, 8, 5, .46);
 }
 [data-theme="dark"] .match-clock .pause {
   background: #315b4c;
@@ -610,6 +618,7 @@ h2 { font-size: 24px; }
   background: #244a68;
   border-color: #315f82;
 }
+[data-theme="dark"] .settings-trigger img { filter: brightness(0) invert(1); }
 [data-theme="dark"] .team-score button,
 [data-theme="dark"] .formation-switch,
 [data-theme="dark"] input {
