@@ -884,15 +884,18 @@ h2 { font-size: 24px; }
 }
 
 @media (max-width: 720px) {
-  input,
-  select,
-  textarea {
-    font-size: 16px;
-  }
   .topbar { grid-template-columns: 1fr 151px 1fr; }
   .pregame-workspace { min-height: calc(100vh - 78px - 76px); padding: 16px; }
   .pregame-card { padding: 28px 20px; }
   .pregame-card h1 { font-size: 24px; }
   .pregame-card > button { width: 100%; }
   .pregame-card > .pregame-secondary { margin: 8px 0 0; }
+}
+
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
