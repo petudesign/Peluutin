@@ -76,7 +76,7 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
 }
 .desktop-brand {
   position: absolute;
-  left: 28px;
+  left: max(28px, calc((100vw - 1440px) / 2 + 18px));
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -99,7 +99,7 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
 .settings-trigger {
   position: absolute;
   top: 50%;
-  right: 28px;
+  right: max(28px, calc((100vw - 1440px) / 2 + 18px));
   transform: translateY(-50%);
   width: 40px;
   height: 40px;
@@ -299,27 +299,13 @@ h2 { font-size: 24px; }
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: minmax(104px, 1fr) 76px 76px;
+    grid-template-columns: 1fr 1fr;
     min-height: 64px;
     padding: 7px max(12px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     border-top: 1px solid rgba(255,255,255,.12);
     background: rgba(23,50,77,.97);
     box-shadow: 0 -8px 24px rgba(18,38,58,.18);
     backdrop-filter: blur(10px);
-  }
-  .mobile-nav-brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    padding-left: 4px;
-    color: #fff;
-    font: 800 14px/1 "Manrope";
-  }
-  .mobile-nav-brand img {
-    width: 27px;
-    height: 27px;
-    filter: none;
   }
   .mobile-nav button {
     display: grid;

@@ -506,10 +506,6 @@ export function App() {
       </section>}
 
       <nav className="mobile-nav" aria-label="Päätoiminnot">
-        <div className="mobile-nav-brand" aria-label="Peluutin">
-          <img src="/favicon.svg" alt="" />
-          <span>Peluutin</span>
-        </div>
         <button onClick={openNewMatch}>
           <span className="mobile-nav-plus" aria-hidden="true">+</span>
           <span>Uusi peli</span>
