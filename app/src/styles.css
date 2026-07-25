@@ -116,7 +116,7 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #17324d;
+  color: var(--text-primary);
 }
 .desktop-brand img { width: 34px; height: 34px; }
 .desktop-brand strong { font: 800 18px/1 "Manrope"; letter-spacing: -.03em; }
