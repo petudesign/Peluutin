@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createFormation, reorderLineup } from "../src/formation.js";
+import { createFormation, reorderLineup } from "../src/formation.ts";
 
 test("creates a valid eight-player formation from a Finnish formation name", () => {
   const slots = createFormation("2–3–2");

@@ -2,7 +2,7 @@ const BLUE = "0B57D0";
 const LIGHT_BLUE = "E8F0FE";
 const BORDER = "D9E2F1";
 
-export async function buildMatchXlsx(match, teamName) {
+export async function buildMatchXlsx(match: MatchRecord, teamName: string) {
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Peluutin";
@@ -78,3 +78,4 @@ export async function buildMatchXlsx(match, teamName) {
 
   return workbook.xlsx.writeBuffer();
 }
+import type { MatchRecord } from "./types";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import ExcelJS from "exceljs";
-import { buildMatchXlsx } from "../src/export.js";
+import { buildMatchXlsx } from "../src/export.ts";
 
 test("builds a formatted and readable Excel workbook", async () => {
   const bytes = await buildMatchXlsx({

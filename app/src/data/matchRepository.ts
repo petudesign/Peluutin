@@ -1,0 +1,24 @@
+import { parseActiveMatch, parseTeams } from "../storage";
+import type { ActiveMatch, Formation, Team } from "../types";
+
+const TEAMS_KEY = "vaihtopeli-teams";
+const ACTIVE_MATCH_KEY = "peluutin-active-match";
+
+export const matchRepository = {
+  loadTeams(defaultFormations: Formation[]): Team[] {
+    return parseTeams(localStorage.getItem(TEAMS_KEY), defaultFormations);
+  },
+
+  saveTeams(teams: Team[]): void {
+    localStorage.setItem(TEAMS_KEY, JSON.stringify(teams));
+  },
+
+  loadActiveMatch(): ActiveMatch | null {
+    return parseActiveMatch(localStorage.getItem(ACTIVE_MATCH_KEY));
+  },
+
+  saveActiveMatch(match: ActiveMatch | null): void {
+    if (match) localStorage.setItem(ACTIVE_MATCH_KEY, JSON.stringify(match));
+    else localStorage.removeItem(ACTIVE_MATCH_KEY);
+  },
+};

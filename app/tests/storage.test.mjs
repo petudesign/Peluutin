@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseActiveMatch, parseTeams } from "../src/storage.js";
+import { parseActiveMatch, parseTeams } from "../src/storage.ts";
 
 const fallbackFormations = [{ id: "2–2–3", name: "2–2–3", slots: [] }];
 
