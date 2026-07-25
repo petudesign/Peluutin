@@ -138,13 +138,13 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   width: 40px;
   height: 40px;
   padding: 9px;
-  border: 1px solid var(--border-default);
+  border: 1px solid #17324d;
   border-radius: 12px;
-  background: var(--surface-panel);
+  background: #17324d;
   cursor: pointer;
-  box-shadow: 0 5px 16px rgba(18,38,58,.12);
+  box-shadow: none;
 }
-.settings-trigger img { display: block; width: 100%; height: 100%; }
+.settings-trigger img { display: block; width: 100%; height: 100%; filter: brightness(0) invert(1); }
 .desktop-theme-trigger {
   position: absolute;
   top: 50%;
@@ -618,7 +618,7 @@ h2 { font-size: 24px; }
   background: #244a68;
   border-color: #315f82;
 }
-[data-theme="dark"] .settings-trigger img { filter: brightness(0) invert(1); }
+[data-theme="dark"] .settings-trigger { box-shadow: 0 5px 16px rgba(8, 19, 28, .34); }
 [data-theme="dark"] .team-score button,
 [data-theme="dark"] .formation-switch,
 [data-theme="dark"] input {
