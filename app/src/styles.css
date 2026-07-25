@@ -403,7 +403,7 @@ h2 { font-size: 24px; }
   .desktop-brand strong { display: none; }
   .desktop-brand img { width: 30px; height: 30px; }
 }
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   .topbar { height: 78px; padding: 8px 12px; }
   .team-score {
     position: relative;
@@ -729,7 +729,7 @@ h2 { font-size: 24px; }
   .attendance-list { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   .topbar { grid-template-columns: 1fr 151px 1fr; }
   .pregame-workspace { min-height: calc(100vh - 78px - 76px); padding: 16px; }
   .pregame-card { padding: 28px 20px; }
