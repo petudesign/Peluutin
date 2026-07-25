@@ -1,30 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
+import { cleanName, FORMATION_MAX_LENGTH, NAME_MAX_LENGTH, parseActiveMatch, parseTeams } from "./storage.js";
 
 const defaultFormations = ["2–2–3", "3–2–2"].map((name) => ({ id: name, name, slots: createFormation(name) }));
 
-const normalizeTeams = (teams) => teams.map((team) => ({
-  ...team,
-  formations: team.formations?.length ? team.formations : defaultFormations,
-  history: team.history || [],
-}));
-
 const loadTeams = () => {
-  try {
-    const saved = JSON.parse(localStorage.getItem("vaihtopeli-teams"));
-    return normalizeTeams(Array.isArray(saved) ? saved : []);
-  } catch {
-    return [];
-  }
+  return parseTeams(localStorage.getItem("vaihtopeli-teams"), defaultFormations);
 };
 
 const loadActiveMatch = () => {
-  try {
-    return JSON.parse(localStorage.getItem("peluutin-active-match"));
-  } catch {
-    return null;
-  }
+  return parseActiveMatch(localStorage.getItem("peluutin-active-match"));
 };
 
 const initialTeams = loadTeams();
@@ -170,7 +156,7 @@ export function App() {
   };
 
   const addTeam = () => {
-    const name = newTeamName.trim();
+    const name = cleanName(newTeamName);
     if (!name) return;
     const team = { id: `team-${Date.now()}`, name, players: [], formations: defaultFormations, history: [] };
     setTeams((current) => [...current, team]);
@@ -179,7 +165,7 @@ export function App() {
   };
 
   const createFirstTeam = () => {
-    const name = onboardingTeamName.trim();
+    const name = cleanName(onboardingTeamName);
     if (!name) return;
     const team = { id: `team-${Date.now()}`, name, players: [], formations: defaultFormations, history: [] };
     setTeams([team]);
@@ -213,7 +199,7 @@ export function App() {
   };
 
   const addPlayer = () => {
-    const name = newPlayerName.trim();
+    const name = cleanName(newPlayerName);
     if (!name) return;
     const player = {
       id: Date.now(),
@@ -239,7 +225,7 @@ export function App() {
   };
 
   const addFormation = () => {
-    const normalizedName = newFormationName.trim().replaceAll("-", "–");
+    const normalizedName = newFormationName.trim().slice(0, FORMATION_MAX_LENGTH).replaceAll("-", "–");
     const nextSlots = createFormation(normalizedName);
     if (!nextSlots || teamFormations.some((item) => item.name === normalizedName)) return;
     updateCurrentTeam((team) => ({ ...team, formations: [...teamFormations, { id: normalizedName, name: normalizedName, slots: nextSlots }] }));
@@ -324,7 +310,7 @@ export function App() {
   };
 
   const createMatch = () => {
-    const nextOpponent = opponentDraft.trim();
+    const nextOpponent = cleanName(opponentDraft);
     if (!nextOpponent) return;
     setOpponent(nextOpponent);
     setVenue(venueDraft);
@@ -359,7 +345,7 @@ export function App() {
           <p>Luo ensimmäinen joukkue. Seuraavaksi pääset lisäämään pelaajat ja valitsemaan muodostelmat.</p>
           <label>
             <span>Joukkueen nimi</span>
-            <input autoFocus value={onboardingTeamName} onChange={(event) => setOnboardingTeamName(event.target.value)}
+            <input autoFocus maxLength={NAME_MAX_LENGTH} value={onboardingTeamName} onChange={(event) => setOnboardingTeamName(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && createFirstTeam()} placeholder="Kirjoita joukkueen nimi" />
           </label>
           <button disabled={!onboardingTeamName.trim()} onClick={createFirstTeam}>Luo joukkue</button>
@@ -534,7 +520,7 @@ export function App() {
             </label>
             <label>
               <span>Vastustaja</span>
-              <input autoFocus value={opponentDraft} onChange={(event) => setOpponentDraft(event.target.value)} placeholder="Vastustajan nimi" />
+              <input autoFocus maxLength={NAME_MAX_LENGTH} value={opponentDraft} onChange={(event) => setOpponentDraft(event.target.value)} placeholder="Vastustajan nimi" />
             </label>
             <fieldset>
               <legend>Oma joukkue pelaa</legend>
@@ -611,32 +597,32 @@ export function App() {
                   ))}
                 </div>
                 <div className="add-row">
-                  <input value={newTeamName} onChange={(event) => setNewTeamName(event.target.value)} placeholder="Uuden joukkueen nimi" />
+                  <input maxLength={NAME_MAX_LENGTH} value={newTeamName} onChange={(event) => setNewTeamName(event.target.value)} placeholder="Uuden joukkueen nimi" />
                   <button onClick={addTeam}>Lisää</button>
                 </div>
               </aside>
               <div className="player-settings">
                 <h3>Valittu joukkue</h3>
                 <div className="team-name-row">
-                  <input value={teamNameDraft} onChange={(event) => setTeamNameDraft(event.target.value)} aria-label="Joukkueen nimi" />
+                  <input maxLength={NAME_MAX_LENGTH} value={teamNameDraft} onChange={(event) => setTeamNameDraft(event.target.value)} aria-label="Joukkueen nimi" />
                   {teamNameDraft.trim() !== homeTeam.name && (
-                    <button onClick={() => updateCurrentTeam((team) => ({ ...team, name: teamNameDraft.trim() || team.name }))}>Tallenna nimi</button>
+                    <button onClick={() => updateCurrentTeam((team) => ({ ...team, name: cleanName(teamNameDraft) || team.name }))}>Tallenna nimi</button>
                   )}
                   <button className="danger destructive-filled" onClick={() => setDeleteTeamOpen(true)}>Poista joukkue</button>
                 </div>
                 <div className="player-editor-list">
                   {roster.map((player) => (
                     <div className="player-editor" key={player.id}>
-                      <input type="number" aria-label={`${player.name} pelinumero`} value={player.number}
-                        onChange={(event) => updateCurrentTeam((team) => ({ ...team, players: team.players.map((item) => item.id === player.id ? { ...item, number: Number(event.target.value) } : item) }))} />
-                      <input aria-label={`${player.name} nimi`} value={player.name}
-                        onChange={(event) => updateCurrentTeam((team) => ({ ...team, players: team.players.map((item) => item.id === player.id ? { ...item, name: event.target.value } : item) }))} />
+                      <input type="number" min="0" max="99" aria-label={`${player.name} pelinumero`} value={player.number}
+                        onChange={(event) => updateCurrentTeam((team) => ({ ...team, players: team.players.map((item) => item.id === player.id ? { ...item, number: Math.min(99, Math.max(0, Number(event.target.value) || 0)) } : item) }))} />
+                      <input maxLength={NAME_MAX_LENGTH} aria-label={`${player.name} nimi`} value={player.name}
+                        onChange={(event) => updateCurrentTeam((team) => ({ ...team, players: team.players.map((item) => item.id === player.id ? { ...item, name: event.target.value.slice(0, NAME_MAX_LENGTH) } : item) }))} />
                       <button className="danger destructive-filled" onClick={() => removePlayer(player.id)}>Poista</button>
                     </div>
                   ))}
                 </div>
                 <div className="add-row player-add">
-                  <input value={newPlayerName} onChange={(event) => setNewPlayerName(event.target.value)} placeholder="Pelaajan nimi" />
+                  <input maxLength={NAME_MAX_LENGTH} value={newPlayerName} onChange={(event) => setNewPlayerName(event.target.value)} placeholder="Pelaajan nimi" />
                   <button onClick={addPlayer}>Lisää pelaaja</button>
                 </div>
 
@@ -654,7 +640,7 @@ export function App() {
                     ))}
                   </div>
                   <div className="add-row">
-                    <input value={newFormationName} onChange={(event) => setNewFormationName(event.target.value)} placeholder="Esim. 2–3–2" />
+                    <input maxLength={FORMATION_MAX_LENGTH} value={newFormationName} onChange={(event) => setNewFormationName(event.target.value)} placeholder="Esim. 2–3–2" />
                     <button onClick={addFormation}>Lisää muodostelma</button>
                   </div>
                 </section>
