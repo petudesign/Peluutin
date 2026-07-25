@@ -10,6 +10,7 @@
   --primary-ring: rgba(11, 87, 208, .28);
   --danger-action: #b74b32;
   --nav-background: rgba(23, 50, 77, .97);
+  --active-glow: none;
   --surface-page: #f3f1eb;
   --surface-panel: #fff;
   --surface-subtle: #f7f8f6;
@@ -37,6 +38,7 @@
   --primary-ring: rgba(106, 157, 244, .42);
   --danger-action: #b84b3a;
   --nav-background: rgba(36, 74, 104, .98);
+  --active-glow: 0 0 0 1px rgba(118, 170, 255, .34), 0 0 14px rgba(67, 132, 239, .28);
   --playtime-behind: #ff9a84;
   --playtime-balanced: #c7d0cc;
   --playtime-ahead: #8ed8b5;
@@ -102,8 +104,9 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   display: grid;
   grid-template-columns: 1fr 190px 1fr;
   align-items: center;
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 .desktop-brand {
   position: absolute;
@@ -533,6 +536,21 @@ h2 { font-size: 24px; }
   border-color: var(--border-default);
 }
 [data-theme="dark"] .topbar { border-bottom-color: var(--border-default); }
+[data-theme="dark"] .topbar { background: rgba(25, 35, 31, .96); backdrop-filter: blur(10px); }
+[data-theme="dark"] .formation-switch .active {
+  border: 1px solid rgba(118, 170, 255, .42);
+  box-shadow: var(--active-glow);
+}
+[data-theme="dark"] .bench-player.selected {
+  box-shadow: var(--active-glow);
+}
+[data-theme="dark"] .player-card.selected {
+  box-shadow: var(--active-glow), 0 6px 16px rgba(2, 8, 5, .48);
+}
+[data-theme="dark"] .match-clock .pause {
+  background: #315b4c;
+  box-shadow: 0 0 0 1px rgba(126, 213, 176, .3), 0 0 14px rgba(76, 176, 132, .22);
+}
 [data-theme="dark"] .settings-trigger,
 [data-theme="dark"] .new-match-trigger {
   background: #244a68;
