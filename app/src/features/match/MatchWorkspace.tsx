@@ -55,7 +55,9 @@ export function MatchWorkspace({
             <button
               key={player.id}
               className={`bench-player ${selected?.id === player.id ? "selected" : ""}`}
-              onClick={() => onSelect({ source: "bench", id: player.id })}
+              onClick={() => onSelect(selected?.source === "bench" && selected.id === player.id
+                ? null
+                : { source: "bench", id: player.id })}
             >
               <span className="avatar">{player.number}</span>
               <span><strong>{player.name}</strong><small>Valmiina vaihtoon</small></span>
@@ -141,7 +143,12 @@ export function MatchWorkspace({
             })()}
             <p className="muted">Pelaaja voidaan vaihtaa vapaasti mille tahansa paikalle.</p>
             <div className="goal-actions">
-              <button className="goal-button" onClick={() => onMarkGoal(selectedPlayer.id)}>Merkitse maali</button>
+              <button
+                className={`goal-button ${selected?.source === "bench" ? "bench-goal-button" : ""}`}
+                onClick={() => onMarkGoal(selectedPlayer.id)}
+              >
+                Merkitse maali
+              </button>
               {(goals[selectedPlayer.id] || 0) > 0 && (
                 <button className="secondary remove-goal-button" onClick={() => onRemoveGoal(selectedPlayer.id)}>
                   Poista maali ({goals[selectedPlayer.id]})

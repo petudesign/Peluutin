@@ -8,6 +8,8 @@
   --primary-hover: #0847ad;
   --primary-soft: #e8f0fe;
   --primary-ring: rgba(11, 87, 208, .28);
+  --danger-action: #b74b32;
+  --nav-background: rgba(23, 50, 77, .97);
   --surface-page: #f3f1eb;
   --surface-panel: #fff;
   --surface-subtle: #f7f8f6;
@@ -30,6 +32,11 @@
   --text-muted: #aebbb5;
   --border-default: #3a4942;
   --primary-soft: #183968;
+  --primary: #2f6fd6;
+  --primary-hover: #255eb7;
+  --primary-ring: rgba(106, 157, 244, .42);
+  --danger-action: #b84b3a;
+  --nav-background: rgba(36, 74, 104, .98);
   --playtime-behind: #ff9a84;
   --playtime-balanced: #c7d0cc;
   --playtime-ahead: #8ed8b5;
@@ -221,7 +228,7 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
 }
 .match-clock .pause { background: #263f35; }
 .match-clock .in-match, .match-clock .end-match-button { width: 76px; padding-inline: 8px; }
-.match-clock .end-match-button { padding-inline: 11px; background: #b74b32; color: #fff; border: 1px solid #b74b32; }
+.match-clock .end-match-button { padding-inline: 11px; background: var(--danger-action); color: #fff; border: 1px solid var(--danger-action); }
 
 .workspace {
   height: calc(100vh - 92px);
@@ -310,6 +317,11 @@ h2 { font-size: 24px; }
 .playtime-comparison.ahead { color: var(--playtime-ahead); }
 .goal-button, .secondary { width: 100%; margin-top: 12px; }
 .goal-actions .remove-goal-button { color: #8f3426; }
+.bench-goal-button {
+  border: 1px solid var(--border-default);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
 .secondary { border: 1px solid #d8dcd8; background: #fff; border-radius: 10px; padding: 9px; font-weight: 700; cursor: pointer; }
 
 @media (min-width: 821px) {
@@ -353,7 +365,7 @@ h2 { font-size: 24px; }
     min-height: 64px;
     padding: 7px max(12px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     border-top: 1px solid rgba(255,255,255,.12);
-    background: rgba(23,50,77,.97);
+    background: var(--nav-background);
     box-shadow: 0 -8px 24px rgba(18,38,58,.18);
     backdrop-filter: blur(10px);
   }
@@ -510,7 +522,7 @@ h2 { font-size: 24px; }
 .confirm-modal p { margin: 14px 0 0; color: #66716d; font-size: 14px; line-height: 1.5; }
 .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
 .confirm-actions .secondary { margin: 0; }
-.danger-confirm { border: 0; border-radius: 10px; background: #b74b32; color: #fff; font-weight: 800; cursor: pointer; }
+.danger-confirm { border: 0; border-radius: 10px; background: var(--danger-action); color: #fff; font-weight: 800; cursor: pointer; }
 .confirm-tertiary { display: block; margin: 12px auto 0; border: 0; background: transparent; text-decoration: underline; cursor: pointer; }
 
 [data-theme="dark"] .topbar,
@@ -521,6 +533,11 @@ h2 { font-size: 24px; }
   border-color: var(--border-default);
 }
 [data-theme="dark"] .topbar { border-bottom-color: var(--border-default); }
+[data-theme="dark"] .settings-trigger,
+[data-theme="dark"] .new-match-trigger {
+  background: #244a68;
+  border-color: #315f82;
+}
 [data-theme="dark"] .team-score button,
 [data-theme="dark"] .formation-switch,
 [data-theme="dark"] input {
@@ -540,6 +557,11 @@ h2 { font-size: 24px; }
 [data-theme="dark"] .player-card .player-meta em,
 [data-theme="dark"] .player-card .player-time-on-field { color: #e3ebe7; }
 [data-theme="dark"] .player-card:hover { box-shadow: 0 7px 18px rgba(2, 8, 5, .52); }
+[data-theme="dark"] .bench-goal-button {
+  background: #2b3933;
+  border-color: #53655c;
+  color: #d5dfda;
+}
 .new-match-modal > label { display: grid; gap: 7px; margin-top: 18px; font-size: 12px; font-weight: 700; }
 .new-match-modal input, .new-match-modal select {
   width: 100%;
@@ -619,7 +641,7 @@ h2 { font-size: 24px; }
 }
 .team-name-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; }
 .danger { background: #fff1ed !important; color: #b74b32 !important; border: 1px solid #f1cfc5 !important; }
-.danger.destructive-filled { background: #b74b32 !important; color: #fff !important; border-color: #b74b32 !important; }
+.danger.destructive-filled { background: var(--danger-action) !important; color: #fff !important; border-color: var(--danger-action) !important; }
 .danger:disabled { opacity: .45; cursor: not-allowed; }
 .player-editor-list { display: grid; gap: 6px; margin-top: 22px; }
 .player-editor { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 7px; }
