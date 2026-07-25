@@ -1,4 +1,4 @@
-import { FORMATION_MAX_LENGTH, NAME_MAX_LENGTH } from "../../storage";
+import { FORMATION_MAX_LENGTH, MAX_FORMATIONS, NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, MatchRecord, Player, PlayerId, Team } from "../../types";
 
 interface SettingsDialogProps {
@@ -106,8 +106,14 @@ export function SettingsDialog(props: SettingsDialogProps) {
                 ))}
               </div>
               <div className="add-row">
-                <input maxLength={FORMATION_MAX_LENGTH} value={newFormationName} onChange={(event) => onNewFormationNameChange(event.target.value)} placeholder="Esim. 2–3–2" />
-                <button onClick={onAddFormation}>Lisää muodostelma</button>
+                <input
+                  maxLength={FORMATION_MAX_LENGTH}
+                  value={newFormationName}
+                  onChange={(event) => onNewFormationNameChange(event.target.value)}
+                  placeholder={formations.length >= MAX_FORMATIONS ? "Enintään 3 muodostelmaa" : "Esim. 2–3–2"}
+                  disabled={formations.length >= MAX_FORMATIONS}
+                />
+                <button disabled={formations.length >= MAX_FORMATIONS} onClick={onAddFormation}>Lisää muodostelma</button>
               </div>
             </section>
 

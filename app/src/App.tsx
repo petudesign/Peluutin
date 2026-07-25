@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
-import { cleanName, FORMATION_MAX_LENGTH, NAME_MAX_LENGTH } from "./storage.js";
+import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS, NAME_MAX_LENGTH } from "./storage.js";
 import type { Formation, MatchRecord, PlayerId, Score, SelectedPlayer, Team, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
@@ -236,6 +236,7 @@ export function App() {
   };
 
   const addFormation = () => {
+    if (teamFormations.length >= MAX_FORMATIONS) return;
     const normalizedName = newFormationName.trim().slice(0, FORMATION_MAX_LENGTH).replaceAll("-", "–");
     const nextSlots = createFormation(normalizedName);
     if (!nextSlots || teamFormations.some((item) => item.name === normalizedName)) return;

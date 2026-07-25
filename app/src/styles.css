@@ -696,6 +696,8 @@ h2 { font-size: 24px; }
   font-weight: 700;
   cursor: pointer;
 }
+.add-row button:disabled { opacity: .45; cursor: not-allowed; }
+.add-row input:disabled { opacity: .7; cursor: not-allowed; }
 .close-button { background: #eef1ee; color: #31423c; }
 .settings-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; padding-top: 20px; }
 .settings-layout h3 { margin: 0 0 10px; font: 700 14px "Manrope"; }

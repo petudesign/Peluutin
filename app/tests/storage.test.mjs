@@ -38,3 +38,15 @@ test("accepts a valid paused active match", () => {
 
   assert.equal(parseActiveMatch(JSON.stringify(match)).opponent, "Testi");
 });
+
+test("limits each team to three formations", () => {
+  const formations = ["1", "2", "3", "4"].map((id) => ({ id, name: id, slots: [] }));
+  const [team] = parseTeams(JSON.stringify([{
+    id: "team-1",
+    name: "Testijoukkue",
+    players: [],
+    formations,
+  }]), fallbackFormations);
+
+  assert.deepEqual(team.formations.map(({ id }) => id), ["1", "2", "3"]);
+});

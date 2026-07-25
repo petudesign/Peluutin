@@ -2,6 +2,7 @@ import type { ActiveMatch, Formation, MatchRecord, Player, Score, Team, Venue } 
 
 export const NAME_MAX_LENGTH = 60;
 export const FORMATION_MAX_LENGTH = 12;
+export const MAX_FORMATIONS = 3;
 export const cleanName = (value: unknown): string => String(value || "").trim().slice(0, NAME_MAX_LENGTH);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -29,7 +30,7 @@ export function parseTeams(raw: string | null, defaultFormations: Formation[]): 
     if (!Array.isArray(teams)) return [];
     return teams.flatMap((value): Team[] => {
       if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !Array.isArray(value.players)) return [];
-      const formations = Array.isArray(value.formations) ? value.formations.filter(isFormation) : [];
+      const formations = Array.isArray(value.formations) ? value.formations.filter(isFormation).slice(0, MAX_FORMATIONS) : [];
       return [{
         id: value.id,
         name: cleanName(value.name) || "Nimetön joukkue",
