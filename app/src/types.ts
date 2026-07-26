@@ -2,6 +2,7 @@ export type PlayerId = string | number;
 export type Venue = "home" | "away";
 export type Score = [number, number];
 export type FormationSlot = readonly [role: string, x: number, y: number];
+export type TeamSize = 5 | 8 | 11;
 
 export interface Player {
   id: PlayerId;
@@ -12,6 +13,7 @@ export interface Player {
 export interface Formation {
   id: string;
   name: string;
+  teamSize: TeamSize;
   slots: FormationSlot[];
 }
 

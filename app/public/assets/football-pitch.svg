@@ -5,9 +5,9 @@
       <rect x="60" width="60" height="40" fill="#3f8a32"/>
     </pattern>
     <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#fff" stop-opacity=".06"/>
-      <stop offset=".5" stop-color="#000" stop-opacity=".02"/>
-      <stop offset="1" stop-color="#000" stop-opacity=".12"/>
+      <stop stop-color="#f7faf8" stop-opacity=".06"/>
+      <stop offset=".5" stop-color="#121212" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#121212" stop-opacity=".12"/>
     </linearGradient>
   </defs>
   <rect width="600" height="800" rx="20" fill="url(#grass)"/>

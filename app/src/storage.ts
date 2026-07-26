@@ -1,8 +1,9 @@
-import type { ActiveMatch, Formation, MatchRecord, Player, Score, Team, Venue } from "./types";
+import type { ActiveMatch, Formation, MatchRecord, Player, Score, Team, TeamSize, Venue } from "./types";
 
 export const NAME_MAX_LENGTH = 60;
 export const FORMATION_MAX_LENGTH = 12;
-export const MAX_FORMATIONS = 3;
+export const MAX_FORMATIONS = 9;
+export const MAX_FORMATIONS_PER_TEAM_SIZE = 3;
 export const cleanName = (value: unknown): string => String(value || "").trim().slice(0, NAME_MAX_LENGTH);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -17,8 +18,15 @@ const parsePlayer = (value: unknown): Player | null => {
   };
 };
 
-const isFormation = (value: unknown): value is Formation =>
-  isRecord(value) && typeof value.id === "string" && typeof value.name === "string" && Array.isArray(value.slots);
+const parseFormation = (value: unknown): Formation | null => {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !Array.isArray(value.slots)) return null;
+  const inferredTeamSize = value.slots.length;
+  const teamSize = [5, 8, 11].includes(Number(value.teamSize))
+    ? Number(value.teamSize)
+    : inferredTeamSize;
+  if (![5, 8, 11].includes(teamSize)) return null;
+  return { id: value.id, name: value.name, teamSize: teamSize as TeamSize, slots: value.slots as Formation["slots"] };
+};
 
 const isMatchRecord = (value: unknown): value is MatchRecord =>
   isRecord(value) && typeof value.id === "string" && typeof value.opponent === "string"
@@ -30,7 +38,19 @@ export function parseTeams(raw: string | null, defaultFormations: Formation[]): 
     if (!Array.isArray(teams)) return [];
     return teams.flatMap((value): Team[] => {
       if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !Array.isArray(value.players)) return [];
-      const formations = Array.isArray(value.formations) ? value.formations.filter(isFormation).slice(0, MAX_FORMATIONS) : [];
+      const formationCounts = new Map<TeamSize, number>();
+      const formations = Array.isArray(value.formations)
+        ? value.formations
+          .map(parseFormation)
+          .filter((item): item is Formation => {
+            if (!item) return false;
+            const count = formationCounts.get(item.teamSize) || 0;
+            if (count >= MAX_FORMATIONS_PER_TEAM_SIZE) return false;
+            formationCounts.set(item.teamSize, count + 1);
+            return true;
+          })
+          .slice(0, MAX_FORMATIONS)
+        : [];
       return [{
         id: value.id,
         name: cleanName(value.name) || "Nimetön joukkue",

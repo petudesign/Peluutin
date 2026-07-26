@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { changePlayerGoal, comparePlaytime } from "../src/features/match/matchLogic.ts";
+import { changePlayerGoal, comparePlaytime, formatPitchPlayerName } from "../src/features/match/matchLogic.ts";
 
 test("adds and removes a player goal with the own-team score", () => {
   const added = changePlayerGoal({}, [0, 0], 7, 1, 1);
@@ -22,4 +22,11 @@ test("classifies playtime around the active-player average", () => {
   assert.deepEqual(comparePlaytime(500, 600), { state: "behind", differenceSeconds: -100 });
   assert.deepEqual(comparePlaytime(590, 600), { state: "balanced", differenceSeconds: -10 });
   assert.deepEqual(comparePlaytime(700, 600), { state: "ahead", differenceSeconds: 100 });
+});
+
+test("keeps full short names and abbreviates long pitch-card names", () => {
+  assert.equal(formatPitchPlayerName("Minna L."), "Minna L.");
+  assert.equal(formatPitchPlayerName("Joni-Petteri"), "Joni-Petteri");
+  assert.equal(formatPitchPlayerName("Abdullah Ah-Rahdi"), "Abdullah A.");
+  assert.equal(formatPitchPlayerName("Maximilianusz"), "Maximilianu…");
 });

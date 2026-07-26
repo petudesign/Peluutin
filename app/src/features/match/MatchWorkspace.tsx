@@ -1,5 +1,24 @@
+import type { CSSProperties } from "react";
 import type { Formation, FormationSlot, Player, PlayerId, SelectedPlayer } from "../../types";
-import { comparePlaytime } from "./matchLogic";
+import { comparePlaytime, formatPitchPlayerName } from "./matchLogic";
+
+const displayRole = (role: string) => role === "VTP" ? "VKP" : role === "OTP" ? "OKP" : role;
+const mobileCurve = [-3, 3, -3];
+
+const slotStyle = (slots: FormationSlot[], slotIndex: number): CSSProperties => {
+  const [, x, y] = slots[slotIndex];
+  const row = slots
+    .map((slot, index) => ({ slot, index }))
+    .filter(({ slot }) => slot[2] === y);
+  const rowIndex = row.findIndex(({ index }) => index === slotIndex);
+  const curve = row.length === 3 ? mobileCurve[rowIndex] : 0;
+
+  return {
+    left: `${x}%`,
+    top: `calc(${y}% + var(--mobile-row-curve, 0%))`,
+    "--mobile-row-curve-value": `${curve}%`,
+  } as CSSProperties;
+};
 
 interface MatchWorkspaceProps {
   bench: Player[];
@@ -19,6 +38,8 @@ interface MatchWorkspaceProps {
   onChangeFormation: (formationId: string) => void;
   onMarkGoal: (playerId: PlayerId) => void;
   onRemoveGoal: (playerId: PlayerId) => void;
+  canResetClock: boolean;
+  onRequestResetClock: () => void;
 }
 
 export function MatchWorkspace({
@@ -39,6 +60,8 @@ export function MatchWorkspace({
   onChangeFormation,
   onMarkGoal,
   onRemoveGoal,
+  canResetClock,
+  onRequestResetClock,
 }: MatchWorkspaceProps) {
   const playtimeIndicator = (playerId: PlayerId) => {
     const { state } = comparePlaytime(minutes[playerId] || 0, averageSeconds);
@@ -88,7 +111,7 @@ export function MatchWorkspace({
                 return player && (
                   <button key={id} onClick={() => onSelectField(index)}>
                     <strong>{player.name}</strong>
-                    <span>{playtimeIndicator(id)} {slots[index][0]} · {formatTime(minutes[id] || 0)}</span>
+                    <span>{playtimeIndicator(id)} {displayRole(slots[index][0])} · {formatTime(minutes[id] || 0)}</span>
                   </button>
                 );
               })}
@@ -113,35 +136,40 @@ export function MatchWorkspace({
               ))}
             </div>
           </div>
+          {canResetClock && (
+            <button className="toolbar-reset-trigger" onClick={onRequestResetClock}>Ajan nollaus</button>
+          )}
         </div>
-        <div className="pitch">
-          {slots.map(([role, x, y], index) => {
+        <div className={`pitch ${slots.some(([, x]) => x <= 14) ? "pitch-compact-cards" : ""} ${slots.some(([, x]) => x === 11) ? "pitch-five-player-row" : ""}`}>
+          {slots.map(([role], index) => {
+            const visibleRole = displayRole(role);
             const player = playersById[lineup[index]];
             if (!player) {
               return (
-                <div key={`${formationId}-${index}`} style={{ left: `${x}%`, top: `${y}%` }} className="player-card empty-slot">
-                  <span className="role">{role}</span><strong>Tyhjä</strong>
+                <div key={`${formationId}-${index}`} style={slotStyle(slots, index)} className="player-card empty-slot">
+                  <span className="role">{visibleRole}</span><strong>Tyhjä</strong>
                 </div>
               );
             }
             return (
               <button
                 key={`${formationId}-${index}`}
-                style={{ left: `${x}%`, top: `${y}%` }}
+                style={slotStyle(slots, index)}
                 className={`player-card ${selected?.source === "bench" ? "allowed" : ""} ${selected?.source === "field" && selected.index === index ? "selected" : ""}`}
                 onClick={() => onSelectField(index)}
-                aria-label={`${player.name}, paikka ${role}`}
+                aria-label={`${player.name}, paikka ${visibleRole}`}
+                title={player.name}
               >
+                {playtimeIndicator(player.id)}
                 <span className="player-meta">
-                  <span className="role">{role}</span>
-                  {playtimeIndicator(player.id)}
-                  <em>{goals[player.id] || 0} <span aria-hidden="true">⚽</span></em>
+                  <span className="role">{visibleRole}</span>
                 </span>
-                <strong>{player.name}</strong>
+                <strong>{formatPitchPlayerName(player.name)}</strong>
                 <span className="player-time-on-field">{formatTime(minutes[player.id] || 0)}</span>
               </button>
             );
           })}
+          {canResetClock && <button className="pitch-reset-trigger" onClick={onRequestResetClock}>Ajan nollaus</button>}
         </div>
       </section>
 
@@ -160,7 +188,7 @@ export function MatchWorkspace({
                   : "≈ Lähellä aktiivisten pelaajien keskiarvoa";
               return <p className={`playtime-comparison ${state}`}>{label}</p>;
             })()}
-            <p className="muted">Pelaaja voidaan vaihtaa vapaasti mille tahansa paikalle.</p>
+            <p className="selected-goal-count"><span aria-hidden="true">⚽</span> Maalit {goals[selectedPlayer.id] || 0}</p>
             <div className="goal-actions">
               <button
                 className={`goal-button ${selected?.source === "bench" ? "bench-goal-button" : ""}`}
@@ -176,7 +204,7 @@ export function MatchWorkspace({
             </div>
             <button className="secondary" onClick={() => onSelect(null)}>Peru valinta</button>
           </>
-        ) : <p className="empty-copy">Näet tästä peliajan ja voit merkitä maalin.</p>}
+        ) : <p className="empty-copy">Valitse pelaaja nähdäksesi hänen peliaikansa ja maalinsa tai merkitäksesi uuden maalin.</p>}
       </aside>
     </section>
   );

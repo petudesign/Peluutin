@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
-import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS, NAME_MAX_LENGTH } from "./storage.js";
-import type { Formation, MatchRecord, PlayerId, Score, SelectedPlayer, Team, Venue } from "./types";
+import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
+import type { Formation, MatchRecord, PlayerId, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
 import { Onboarding } from "./components/Onboarding";
@@ -14,7 +14,17 @@ import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { changePlayerGoal } from "./features/match/matchLogic";
 
-const defaultFormations: Formation[] = ["2–2–3", "3–2–2"].map((name) => ({ id: name, name, slots: createFormation(name)! }));
+const defaultFormations: Formation[] = [
+  [8, "2–3–2"],
+  [8, "3–2–2"],
+  [5, "1–2–1"],
+  [11, "4–4–2"],
+].map(([teamSize, name]) => ({
+  id: `${teamSize}-${name}`,
+  name: String(name),
+  teamSize: teamSize as TeamSize,
+  slots: createFormation(String(name), teamSize as TeamSize)!,
+}));
 
 const initialTeams = matchRepository.loadTeams(defaultFormations);
 const initialActiveMatch = matchRepository.loadActiveMatch();
@@ -47,9 +57,11 @@ export function App() {
   const [newTeamName, setNewTeamName] = useState("");
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newFormationName, setNewFormationName] = useState("");
+  const [newFormationTeamSize, setNewFormationTeamSize] = useState<TeamSize>(8);
   const [historyNotice, setHistoryNotice] = useState("");
   const [formation, setFormation] = useState(restoredMatch?.formation || initialTeam?.formations?.[0]?.id || defaultFormations[0].id);
-  const [lineup, setLineup] = useState(restoredMatch?.lineup || initialTeam?.players.slice(0, 8).map((p) => p.id) || []);
+  const initialFormation = initialTeam?.formations?.find((item) => item.id === (restoredMatch?.formation || initialTeam.formations[0]?.id));
+  const [lineup, setLineup] = useState(restoredMatch?.lineup || initialTeam?.players.slice(0, initialFormation?.slots.length || 8).map((p) => p.id) || []);
   const [selected, setSelected] = useState<SelectedPlayer | null>(null);
   const [seconds, setSeconds] = useState(restoredMatch?.seconds || 0);
   const [running, setRunning] = useState(false);
@@ -62,7 +74,10 @@ export function App() {
   const byId = useMemo(() => Object.fromEntries(roster.map((p) => [p.id, p])), [roster]);
   const activeRoster = roster.filter((player) => activePlayerIds.includes(player.id));
   const bench = activeRoster.filter((p) => !lineup.includes(p.id));
-  const teamFormations = homeTeam?.formations || defaultFormations;
+  const teamFormations = (homeTeam?.formations || defaultFormations).map((item) => ({
+    ...item,
+    slots: createFormation(item.name, item.teamSize) || item.slots,
+  }));
   const activeFormation = teamFormations.find((item) => item.id === formation) || teamFormations[0];
   const slots = activeFormation?.slots || defaultFormations[0].slots;
   const selectedPlayer = selected ? byId[selected.id] : null;
@@ -78,6 +93,12 @@ export function App() {
   useEffect(() => {
     matchRepository.saveTeams(teams);
   }, [teams]);
+
+  useEffect(() => {
+    if (!historyNotice) return;
+    const timer = window.setTimeout(() => setHistoryNotice(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [historyNotice]);
 
   useEffect(() => {
     if (!matchCreated || matchEnded || !homeTeam) {
@@ -120,10 +141,11 @@ export function App() {
   }, [running, lineup]);
 
   const activateTeam = (nextTeam: Team) => {
+    const nextFormation = (nextTeam.formations || defaultFormations)[0];
     setTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setFormation((nextTeam.formations || defaultFormations)[0].id);
-    setLineup(nextTeam.players.slice(0, 8).map((player) => player.id));
+    setFormation(nextFormation.id);
+    setLineup(nextTeam.players.slice(0, nextFormation.slots.length).map((player) => player.id));
     setActivePlayerIds(nextTeam.players.map((player) => player.id));
     setActivePlayerDraft(nextTeam.players.map((player) => player.id));
     setMinutes(Object.fromEntries(nextTeam.players.map((player) => [player.id, 0])));
@@ -228,7 +250,7 @@ export function App() {
     setLineup((current) => {
       const next = current.filter((id) => id !== playerId);
       remaining.forEach((player) => {
-        if (next.length < 8 && !next.includes(player.id)) next.push(player.id);
+        if (next.length < slots.length && !next.includes(player.id)) next.push(player.id);
       });
       return next;
     });
@@ -236,11 +258,15 @@ export function App() {
   };
 
   const addFormation = () => {
-    if (teamFormations.length >= MAX_FORMATIONS) return;
+    if (teamFormations.filter((item) => item.teamSize === newFormationTeamSize).length >= MAX_FORMATIONS_PER_TEAM_SIZE) return;
     const normalizedName = newFormationName.trim().slice(0, FORMATION_MAX_LENGTH).replaceAll("-", "–");
-    const nextSlots = createFormation(normalizedName);
-    if (!nextSlots || teamFormations.some((item) => item.name === normalizedName)) return;
-    updateCurrentTeam((team) => ({ ...team, formations: [...teamFormations, { id: normalizedName, name: normalizedName, slots: nextSlots }] }));
+    const nextSlots = createFormation(normalizedName, newFormationTeamSize);
+    if (!nextSlots || teamFormations.some((item) => item.name === normalizedName && item.teamSize === newFormationTeamSize)) return;
+    const id = `${newFormationTeamSize}-${normalizedName}`;
+    updateCurrentTeam((team) => ({
+      ...team,
+      formations: [...teamFormations, { id, name: normalizedName, teamSize: newFormationTeamSize, slots: nextSlots }],
+    }));
     setNewFormationName("");
   };
 
@@ -258,7 +284,7 @@ export function App() {
     venue,
     score: [...score],
     duration: seconds,
-    formation,
+    formation: activeFormation?.name || formation,
     players: activeRoster.map((player) => ({
       id: player.id,
       name: player.name,
@@ -297,6 +323,7 @@ export function App() {
 
   const deleteMatch = (matchId: string) => {
     updateCurrentTeam((team) => ({ ...team, history: (team.history || []).filter((match) => match.id !== matchId) }));
+    setHistoryNotice("Peli poistettu historiasta.");
   };
 
   const exportMatch = async (match: MatchRecord) => {
@@ -315,20 +342,6 @@ export function App() {
     }
   };
 
-  const shareSituation = async () => {
-    const homeName = venue === "home" ? homeTeam.name : opponent;
-    const awayName = venue === "home" ? opponent : homeTeam.name;
-    const text = `${homeName} ${score[0]}–${score[1]} ${awayName} · ${formatTime(seconds)}`;
-    const canShare = typeof navigator.share === "function";
-    try {
-      if (canShare) await navigator.share({ title: "Ottelutilanne", text });
-      else await navigator.clipboard.writeText(text);
-      setHistoryNotice(canShare ? "Tilanne jaettu." : "Tilanne kopioitu leikepöydälle.");
-    } catch {
-      setHistoryNotice("Jakaminen peruttiin.");
-    }
-  };
-
   const openNewMatch = () => {
     setOpponentDraft(opponent);
     setVenueDraft(venue);
@@ -336,13 +349,14 @@ export function App() {
     setNewMatchOpen(true);
   };
 
-  const createMatch = () => {
+  const createMatch = (formationId: string, startingLineup: PlayerId[]) => {
     const nextOpponent = cleanName(opponentDraft);
     if (!nextOpponent) return;
     setOpponent(nextOpponent);
     setVenue(venueDraft);
     setActivePlayerIds(activePlayerDraft);
-    setLineup(activePlayerDraft.slice(0, 8));
+    setFormation(formationId);
+    setLineup(startingLineup);
     setSeconds(0);
     setScore([0, 0]);
     setMinutes(Object.fromEntries(roster.map((player) => [player.id, 0])));
@@ -429,7 +443,7 @@ export function App() {
         <MatchWorkspace
           bench={bench}
           lineup={lineup}
-          formations={teamFormations}
+          formations={teamFormations.filter((item) => item.slots.length === slots.length)}
           formationId={formation}
           slots={slots}
           playersById={byId}
@@ -444,6 +458,8 @@ export function App() {
           onChangeFormation={changeFormation}
           onMarkGoal={markGoal}
           onRemoveGoal={removeGoal}
+          canResetClock={matchCreated && !matchEnded && !running && seconds > 0}
+          onRequestResetClock={() => setResetClockOpen(true)}
         />
       )}
 
@@ -462,6 +478,8 @@ export function App() {
           venue={venueDraft}
           activePlayerIds={activePlayerDraft}
           roster={roster}
+          formations={teamFormations}
+          initialFormationId={formation}
           onSelectTeam={activateTeam}
           onOpponentChange={setOpponentDraft}
           onVenueChange={setVenueDraft}
@@ -503,9 +521,9 @@ export function App() {
 
       {resetClockOpen && (
         <ConfirmDialog
-          title="Nollataanko peliajat?"
+          title="Nollataanko tämän pelin ajat?"
           description="Ottelun kello ja kaikkien pelaajien peliajat nollataan. Tulosta ja maaleja ei muuteta."
-          confirmLabel="Nollaa peliajat"
+          confirmLabel="Nollaa ajat"
           cancelLabel="Peruuta"
           onConfirm={resetClock}
           onCancel={() => setResetClockOpen(false)}
@@ -534,6 +552,7 @@ export function App() {
           newTeamName={newTeamName}
           newPlayerName={newPlayerName}
           newFormationName={newFormationName}
+          newFormationTeamSize={newFormationTeamSize}
           historyNotice={historyNotice}
           formatTime={formatTime}
           onClose={() => setSettingsOpen(false)}
@@ -542,6 +561,7 @@ export function App() {
           onNewTeamNameChange={setNewTeamName}
           onNewPlayerNameChange={setNewPlayerName}
           onNewFormationNameChange={setNewFormationName}
+          onNewFormationTeamSizeChange={setNewFormationTeamSize}
           onAddTeam={addTeam}
           onSaveTeamName={saveTeamName}
           onRequestDeleteTeam={() => setDeleteTeamOpen(true)}
@@ -551,10 +571,7 @@ export function App() {
           onAddPlayer={addPlayer}
           onRemoveFormation={removeFormation}
           onAddFormation={addFormation}
-          onShareSituation={shareSituation}
           onSaveMatch={saveMatch}
-          canResetClock={matchCreated && !matchEnded && !running && seconds > 0}
-          onRequestResetClock={() => setResetClockOpen(true)}
           onExportMatch={exportMatch}
           onDeleteMatch={deleteMatch}
         />

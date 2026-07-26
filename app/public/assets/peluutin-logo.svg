@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 246 64" role="img" aria-labelledby="title">
   <title id="title">Peluutin</title>
   <rect width="64" height="64" rx="16" fill="#17324d"/>
-  <path d="M21 47V17h14.5c8.7 0 14.5 4.9 14.5 12.2S44.2 41.5 35.5 41.5H29V47h-8Zm8-13h6.2c4.2 0 6.7-1.7 6.7-4.8s-2.5-4.7-6.7-4.7H29V34Z" fill="#fff"/>
-  <circle cx="47.5" cy="46.5" r="5.5" fill="#2f80ed"/>
+  <path d="M21 47V17h14.5c8.7 0 14.5 4.9 14.5 12.2S44.2 41.5 35.5 41.5H29V47h-8Zm8-13h6.2c4.2 0 6.7-1.7 6.7-4.8s-2.5-4.7-6.7-4.7H29V34Z" fill="#f7faf8"/>
+  <g transform="translate(42 41)">
+    <circle cx="5.5" cy="5.5" r="5.5" fill="#f7fbfc"/>
+    <path d="m5.5 2.5 2 1.45-.76 2.35H4.26L3.5 3.95Z" fill="#2f80ed"/>
+    <path d="M3.5 3.95 1.1 3.5M7.5 3.95l2.4-.45M4.26 6.3 2.8 8.8M6.74 6.3 8.2 8.8" fill="none" stroke="#2f80ed" stroke-width=".8" stroke-linecap="round"/>
+  </g>
   <text x="80" y="42" fill="#17324d" font-family="Manrope, Arial, sans-serif" font-size="30" font-weight="800">Peluutin</text>
 </svg>

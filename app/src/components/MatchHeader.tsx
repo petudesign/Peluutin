@@ -43,9 +43,13 @@ export function MatchHeader({
       </div>
       <div className="team-score">
         <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
-        <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => onChangeScore(0, -1)}>−</button>
+        <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => onChangeScore(0, -1)}>
+          <span className="score-minus-icon" aria-hidden="true" />
+        </button>
         <b>{score[0]}</b>
-        <button disabled={!matchCreated} aria-label="Lisää kotijoukkueen maali" onClick={() => onChangeScore(0, 1)}>+</button>
+        <button disabled={!matchCreated} aria-label="Lisää kotijoukkueen maali" onClick={() => onChangeScore(0, 1)}>
+          <img className="add-icon" src="/assets/icon-add.svg" alt="" />
+        </button>
       </div>
       <div className="match-clock">
         {matchCreated ? <span>{formattedTime}</span> : <span className="no-match-status">Ei aktiivista peliä</span>}
@@ -62,13 +66,17 @@ export function MatchHeader({
       </div>
       <div className="team-score away">
         <div><span className="eyebrow">VIERAS</span><strong>{awayName || "Vierasjoukkue"}</strong></div>
-        <button disabled={!matchCreated} aria-label="Vähennä vierasjoukkueen maalia" onClick={() => onChangeScore(1, -1)}>−</button>
+        <button disabled={!matchCreated} aria-label="Vähennä vierasjoukkueen maalia" onClick={() => onChangeScore(1, -1)}>
+          <span className="score-minus-icon" aria-hidden="true" />
+        </button>
         <b>{score[1]}</b>
-        <button disabled={!matchCreated} aria-label="Lisää vierasjoukkueen maali" onClick={() => onChangeScore(1, 1)}>+</button>
+        <button disabled={!matchCreated} aria-label="Lisää vierasjoukkueen maali" onClick={() => onChangeScore(1, 1)}>
+          <img className="add-icon" src="/assets/icon-add.svg" alt="" />
+        </button>
       </div>
-      <button className="new-match-trigger" onClick={onNewMatch}><span aria-hidden="true">+</span> Uusi peli</button>
+      <button className="new-match-trigger" onClick={onNewMatch}><img className="add-icon" src="/assets/icon-add.svg" alt="" /> Uusi peli</button>
       <button className="settings-trigger" aria-label="Asetukset" onClick={onOpenSettings}>
-        <img src="/assets/settings-svgrepo-com.svg" alt="" />
+        <img src="/assets/icon-settings.svg" alt="" />
       </button>
       <button
         className="desktop-theme-trigger"

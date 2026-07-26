@@ -27,7 +27,7 @@ export function Onboarding({ teamName, onTeamNameChange, onCreateTeam }: Onboard
             value={teamName}
             onChange={(event) => onTeamNameChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Kirjoita joukkueen nimi"
+            placeholder="Esim. Testijoukkue FC"
           />
         </label>
         <button disabled={!teamName.trim()} onClick={onCreateTeam}>Luo joukkue</button>
