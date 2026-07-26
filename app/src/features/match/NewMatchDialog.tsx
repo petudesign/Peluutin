@@ -91,7 +91,7 @@ export function NewMatchDialog({
             <span className="eyebrow">{step === "details" ? "OTTELU" : "KOKOONPANO"}</span>
             <h2 id="new-match-title">{step === "details" ? "Luo uusi peli" : "Muokkaa aloituskokoonpanoa"}</h2>
           </div>
-          <button className="close-button" onClick={onClose}>Sulje</button>
+          {step === "details" && <button className="close-button" onClick={onClose}>Sulje</button>}
         </div>
         {step === "details" ? (
           <>

@@ -828,7 +828,7 @@ h2 { font-size: 24px; }
 }
 input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
 .lineup-intro { margin: 18px 0 12px; color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
-.starting-lineup-list { display: grid; gap: 7px; }
+.starting-lineup-list { display: grid; gap: 7px; margin-top: 12px; }
 .starting-lineup-list label {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
@@ -839,7 +839,7 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
 .settings-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid #e4e6e2; }
 .new-match-modal.lineup-step .settings-header {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr);
   gap: 12px;
 }
 .lineup-back-button {
@@ -848,9 +848,9 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
   display: grid;
   place-items: center;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--border-default);
   border-radius: 10px;
-  background: transparent;
+  background: var(--surface-subtle);
   cursor: pointer;
 }
 .lineup-back-button img { width: 19px; height: 19px; }
