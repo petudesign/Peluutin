@@ -37,3 +37,8 @@ export interface ExerciseDraft {
 export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
   return from.kind === "ball" || to.kind === "ball" || from.team === to.team;
 }
+
+export function keepSingleBall(markers: ExerciseMarker[]) {
+  let hasBall = false;
+  return markers.filter((marker) => marker.kind !== "ball" || (!hasBall && (hasBall = true)));
+}
