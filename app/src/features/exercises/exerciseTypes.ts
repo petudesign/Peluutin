@@ -1,5 +1,5 @@
 export type ExerciseView = "2d" | "3d";
-export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "pass" | "run";
+export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "pass" | "run" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
 
 export interface ExerciseMarker {
   id: string;
@@ -18,9 +18,18 @@ export interface ExercisePath {
   toId: string;
 }
 
+export interface ExerciseAnnotation {
+  id: string;
+  kind: "text" | "draw" | "line" | "rectangle" | "circle";
+  color: string;
+  text?: string;
+  points: Array<{ x: number; z: number }>;
+}
+
 export interface ExerciseDraft {
   name: string;
   markers: ExerciseMarker[];
   paths: ExercisePath[];
+  annotations: ExerciseAnnotation[];
   updatedAt: string;
 }

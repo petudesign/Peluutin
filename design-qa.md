@@ -1,54 +1,34 @@
 # Harjoitteet MVP — design QA
 
-- Source visual truth: `C:\Users\petsk\Documents\Vaihto\.qa\exercise-reference.png`
-- Implementation screenshot: `C:\Users\petsk\Documents\Vaihto\.qa\exercise-implementation-desktop.png`
-- Side-by-side comparison: `C:\Users\petsk\Documents\Vaihto\.qa\exercise-design-comparison.png`
-- Source pixels: 1851 × 1000
-- Implementation pixels and CSS viewport: 1440 × 900 at device scale factor 1
-- Comparison normalization: both images scaled to 720 px width and placed side by side without cropping
-- State: dark theme, populated exercise, 3D view, two animated paths available
+- Visual reference: user-supplied dark full-screen tactics editor (`codex-clipboard-40d5fb03-84bf-4f3f-a305-142c9f436b77.png`)
+- Verification viewport: desktop browser at 1280 × 720
+- State: dark full-screen editor, populated exercise, 3D view, two animated pass routes
 
 ## Full-view comparison evidence
 
-- The reference's editor skeleton is preserved: compact command header, central field, left tool rail, right inspector and bottom playback controls.
-- Peluutin's existing navy/green palette, Manrope/DM Sans typography, border radii and button hierarchy intentionally replace the reference product's orange/blue branding.
-- The 3D field remains the dominant focal surface while tool panels stay visually secondary.
-- Player markers, ball, labels and directional paths are clearly distinguishable against the pitch.
-- The implementation is intentionally less control-dense than the reference because this is the first usable MVP, not a full tactics-animation suite.
-
-## Focused region evidence
-
-No separate crop was required. The original 1440 × 900 implementation screenshot was inspected at full resolution, where header controls, tool labels, marker labels, inspector text and playback controls remain readable. The field and chrome were also tested separately in the browser at 834 × 1112 and 390 × 844.
+- The field now owns the full viewport, matching the reference's canvas-first hierarchy. Header, tool rail, inspector and playback are compact floating overlays instead of permanent page columns.
+- Peluutin branding is retained through the navy panels, blue selected states, orange playback action, Manrope typography and existing logo assets.
+- The pitch uses a dark alternating stripe surface. Outer boundary, halfway line, centre circle and spot, both penalty and goal areas, penalty spots and arcs, corner arcs, goals and perimeter advertising boards are visible.
+- Player tokens are smaller and taller, with bright team colours and a light top rim. 2D tokens do not cast shadows.
+- Routes use a thicker bright line, destination arrow and three visible moving pulses.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: existing Peluutin Manrope and DM Sans hierarchy is consistently applied to the header, tools, inspector, marker labels and playback controls. No browser-default control typography remains.
-- Spacing and layout rhythm: three-column editor structure matches the reference. Desktop spacing is balanced; tablet panels use compact padding and a bounded stage height.
-- Colors and visual tokens: all application chrome uses Peluutin theme tokens. The pitch and two team colors remain semantically clear in dark mode.
-- Image and asset quality: the supplied Peluutin logo assets are reused. The pitch, markers and paths are real Three.js editor geometry rather than a static screenshot or placeholder asset.
-- Copy and content: reference-specific Arsenal and scouting copy was intentionally replaced with Finnish Peluutin exercise controls. Above-the-fold labels are limited to the requested editor workflow.
+- Layout: compact floating controls preserve the reference's field-dominant workspace without copying its branding.
+- Tools: cursor, two player colours, ball, pass, run, free draw, straight line, rectangle, circle, text and eraser are present as real outline icons with accessible labels.
+- Tablet and mobile: the editor remains available from 721 px upward and is intentionally replaced by the existing larger-screen notice on phones.
+- Persistence: existing local drafts remain compatible; missing annotation data is migrated to an empty list and new work continues to autosave locally.
 
 ## Interaction evidence
 
-- Opened Harjoitteet from the desktop/tablet Peluutin header.
-- Switched between 2D and 3D views using the same exercise data.
-- Added a blue player by choosing the tool and clicking the field.
-- Selected a marker and created a second pass route to another marker.
-- Started and stopped the route pulse animation.
-- Verified autosave state and direct `#harjoitteet` reload.
-- Verified that the Harjoitteet entry is absent at 390 px and a direct mobile exercise link shows the larger-screen notice.
-- Browser console contained only Vite HMR connection noise and upstream Three.js deprecation warnings; no application runtime exception was observed.
+- Production typecheck and all 20 repository tests pass.
+- Production build succeeds; the exercise editor remains a separately loaded chunk.
+- The live browser render was inspected after HMR at the current local preview.
+- The new tool data flow supports click-to-add markers/text, drag-to-draw lines and shapes, object deletion, marker movement and path playback.
 
-## Comparison history
+## Remaining intentional deviation
 
-1. P2 — portrait tablet canvas stretched to the full viewport height, leaving excessive empty 3D space. Fixed by bounding the tablet stage and side-panel height to the available editor width.
-2. P2 — narrow tablet perspective clipped edge markers. Fixed with aspect-aware 3D camera distance and compact tablet grid tracks.
-3. Post-fix evidence — 834 × 1112 tablet capture retained all three editor columns, field controls and visible edge markers without horizontal overflow.
-
-## Remaining intentional deviations
-
-- The reference has a full timeline, camera presets, drawing palette and many equipment tools. These are intentionally excluded from the MVP.
-- The MVP uses readable text tool buttons instead of the reference's icon-only rails.
-- 3D printing/export is not included.
+- Timeline/phase authoring is deliberately deferred. It will be a separate explicit mode rather than silently recording every canvas edit.
+- Camera presets, templates, equipment libraries and print/export are not part of this iteration.
 
 final result: passed
