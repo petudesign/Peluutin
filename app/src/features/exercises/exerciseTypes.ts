@@ -42,3 +42,7 @@ export function keepSingleBall(markers: ExerciseMarker[]) {
   let hasBall = false;
   return markers.filter((marker) => marker.kind !== "ball" || (!hasBall && (hasBall = true)));
 }
+
+export function canAddTeamPlayer(markers: ExerciseMarker[], team: "blue" | "red") {
+  return markers.filter((marker) => marker.kind === "player" && marker.team === team).length < 11;
+}
