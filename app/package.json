@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/prepare-sites-build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/export.test.mjs tests/formation.test.mjs tests/match-logic.test.mjs tests/storage.test.mjs tests/sites-worker.test.mjs",
+    "test": "node --experimental-strip-types --test tests/exercise.test.mjs tests/export.test.mjs tests/formation.test.mjs tests/match-logic.test.mjs tests/storage.test.mjs tests/sites-worker.test.mjs",
     "check": "npm run typecheck && npm test && npm run build",
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs"

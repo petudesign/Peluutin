@@ -33,3 +33,7 @@ export interface ExerciseDraft {
   annotations: ExerciseAnnotation[];
   updatedAt: string;
 }
+
+export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
+  return from.kind === "ball" || to.kind === "ball" || from.team === to.team;
+}
