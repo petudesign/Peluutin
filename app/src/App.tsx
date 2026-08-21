@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
@@ -13,6 +13,8 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { changePlayerGoal } from "./features/match/matchLogic";
+
+const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
 const defaultFormations: Formation[] = [
   [8, "2–3–2"],
@@ -35,6 +37,7 @@ const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 export function App() {
+  const [activeFeature, setActiveFeature] = useState<"matches" | "exercises">(() => window.location.hash === "#harjoitteet" ? "exercises" : "matches");
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
@@ -408,8 +411,31 @@ export function App() {
     }));
   };
 
+  const openExercises = () => {
+    window.history.replaceState(null, "", "#harjoitteet");
+    setActiveFeature("exercises");
+  };
+
+  const closeExercises = () => {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    setActiveFeature("matches");
+  };
+
   if (!homeTeam) {
     return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} />;
+  }
+
+  if (activeFeature === "exercises") {
+    return (
+      <Suspense fallback={<main className="exercise-loading">Avataan harjoituseditoria…</main>}>
+        <ExercisePlanner
+          team={homeTeam}
+          theme={theme}
+          onBack={closeExercises}
+          onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+        />
+      </Suspense>
+    );
   }
 
   return (
@@ -428,6 +454,7 @@ export function App() {
         onEndMatch={() => setEndMatchOpen(true)}
         onNewMatch={openNewMatch}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenExercises={openExercises}
         theme={theme}
         onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />

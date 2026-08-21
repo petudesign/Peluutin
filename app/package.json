@@ -13,15 +13,18 @@
     "test:sites": "node --test tests/sites-worker.test.mjs"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.7.0",
     "@vitejs/plugin-react": "5.0.4",
     "exceljs": "^4.4.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "three": "^0.185.1",
     "vite": "6.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@types/three": "^0.185.4",
     "typescript": "^5.9.3"
   }
 }

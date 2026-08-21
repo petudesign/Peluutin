@@ -14,6 +14,7 @@ interface MatchHeaderProps {
   onEndMatch: () => void;
   onNewMatch: () => void;
   onOpenSettings: () => void;
+  onOpenExercises: () => void;
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }
@@ -32,6 +33,7 @@ export function MatchHeader({
   onEndMatch,
   onNewMatch,
   onOpenSettings,
+  onOpenExercises,
   theme,
   onToggleTheme,
 }: MatchHeaderProps) {
@@ -40,6 +42,7 @@ export function MatchHeader({
       <div className="desktop-brand" aria-label="Peluutin">
         <img src="/favicon.svg" alt="" />
         <strong>Peluutin</strong>
+        <button className="exercise-nav-link" onClick={onOpenExercises}>Harjoitteet</button>
       </div>
       <div className="team-score">
         <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
