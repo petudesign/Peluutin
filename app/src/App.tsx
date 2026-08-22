@@ -94,6 +94,10 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
+    document.title = `Peluutin – ${activeFeature === "exercises" ? "Harjoitteet" : "Ottelut"}`;
+  }, [activeFeature]);
+
+  useEffect(() => {
     matchRepository.saveTeams(teams);
   }, [teams]);
 

@@ -39,9 +39,9 @@ export function MatchHeader({
 }: MatchHeaderProps) {
   return (
     <header className="topbar">
-      <div className="desktop-brand" aria-label="Peluutin">
+      <div className="desktop-brand" aria-label="Peluutin Ottelut">
         <img src="/favicon.svg" alt="" />
-        <strong>Peluutin</strong>
+        <span className="desktop-brand-lockup"><strong>Peluutin</strong><small>Ottelut</small></span>
         <button className="exercise-nav-link" onClick={onOpenExercises}>Harjoitteet</button>
       </div>
       <div className="team-score">
