@@ -43,7 +43,7 @@ export function MatchHeader({
       <div className="desktop-brand" aria-label="Peluutin Ottelut">
         <img src="/favicon.svg" alt="" />
         <span className="desktop-brand-lockup"><strong>Peluutin</strong><small>Ottelut</small></span>
-        <button className="exercise-nav-link" onClick={onOpenExercises}>Harjoitteet</button>
+        <a className="exercise-nav-link" href="#harjoitteet" onClick={onOpenExercises}>Harjoitteet</a>
       </div>
       <div className="team-score">
         <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>

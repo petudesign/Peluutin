@@ -114,6 +114,12 @@ export function App() {
   }, [activeFeature]);
 
   useEffect(() => {
+    const syncFeatureFromHash = () => setActiveFeature(window.location.hash === "#harjoitteet" ? "exercises" : "matches");
+    window.addEventListener("hashchange", syncFeatureFromHash);
+    return () => window.removeEventListener("hashchange", syncFeatureFromHash);
+  }, []);
+
+  useEffect(() => {
     matchRepository.saveTeams(teams);
   }, [teams]);
 
