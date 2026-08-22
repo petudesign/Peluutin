@@ -1,3 +1,4 @@
+import { CalendarDays, Settings, UsersRound } from "lucide-react";
 import type { Score } from "../types";
 
 interface MatchHeaderProps {
@@ -13,10 +14,10 @@ interface MatchHeaderProps {
   onToggleClock: () => void;
   onEndMatch: () => void;
   onNewMatch: () => void;
+  onOpenTeams: () => void;
+  onOpenGames: () => void;
   onOpenSettings: () => void;
   onOpenExercises: () => void;
-  theme: "light" | "dark";
-  onToggleTheme: () => void;
 }
 
 export function MatchHeader({
@@ -32,10 +33,10 @@ export function MatchHeader({
   onToggleClock,
   onEndMatch,
   onNewMatch,
+  onOpenTeams,
+  onOpenGames,
   onOpenSettings,
   onOpenExercises,
-  theme,
-  onToggleTheme,
 }: MatchHeaderProps) {
   return (
     <header className="topbar">
@@ -78,15 +79,14 @@ export function MatchHeader({
         </button>
       </div>
       <button className="new-match-trigger" onClick={onNewMatch}><img className="add-icon" src="/assets/icon-add.svg" alt="" /> Uusi peli</button>
-      <button className="settings-trigger" aria-label="Asetukset" onClick={onOpenSettings}>
-        <img src="/assets/icon-settings.svg" alt="" />
+      <button className="teams-trigger" aria-label="Joukkueet" title="Joukkueet" onClick={onOpenTeams}>
+        <UsersRound size={18} aria-hidden="true"/>
       </button>
-      <button
-        className="desktop-theme-trigger"
-        aria-label={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"}
-        onClick={onToggleTheme}
-      >
-        <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+      <button className="games-trigger" aria-label="Pelit" title="Pelit" onClick={onOpenGames}>
+        <CalendarDays size={18} aria-hidden="true"/>
+      </button>
+      <button className="settings-trigger" aria-label="Asetukset" title="Asetukset" onClick={onOpenSettings}>
+        <Settings size={19} aria-hidden="true" />
       </button>
     </header>
   );

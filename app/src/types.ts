@@ -42,6 +42,7 @@ export interface Team {
 }
 
 export interface ActiveMatch {
+  scheduledMatchId?: string;
   teamId: string;
   opponent: string;
   venue: Venue;
@@ -52,6 +53,17 @@ export interface ActiveMatch {
   score: Score;
   minutes: Record<PlayerId, number>;
   goals: Record<PlayerId, number>;
+}
+
+export interface ScheduledMatch {
+  id: string;
+  scheduledAt: string;
+  teamId: string;
+  opponent: string;
+  venue: Venue;
+  formation: string;
+  activePlayerIds: PlayerId[];
+  lineup: PlayerId[];
 }
 
 export type SelectedPlayer =

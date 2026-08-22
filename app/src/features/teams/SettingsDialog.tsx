@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Settings } from "lucide-react";
 import { validateFormation } from "../../formation";
 import { FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "../../storage";
-import type { Formation, MatchRecord, Player, PlayerId, Team, TeamSize } from "../../types";
+import type { Formation, Player, PlayerId, Team, TeamSize } from "../../types";
 
 interface SettingsDialogProps {
   teams: Team[];
@@ -14,9 +15,8 @@ interface SettingsDialogProps {
   newPlayerName: string;
   newFormationName: string;
   newFormationTeamSize: TeamSize;
-  historyNotice: string;
-  formatTime: (seconds: number) => string;
   onClose: () => void;
+  onOpenAppSettings: () => void;
   onActivateTeam: (team: Team) => void;
   onTeamNameDraftChange: (value: string) => void;
   onNewTeamNameChange: (value: string) => void;
@@ -32,22 +32,17 @@ interface SettingsDialogProps {
   onAddPlayer: () => void;
   onRemoveFormation: (id: string) => void;
   onAddFormation: () => void;
-  onSaveMatch: () => void;
-  onExportMatch: (match: MatchRecord) => void;
-  onDeleteMatch: (id: string) => void;
 }
 
 export function SettingsDialog(props: SettingsDialogProps) {
-  const [storageInfoOpen, setStorageInfoOpen] = useState(false);
   const [formationError, setFormationError] = useState("");
   const {
     teams, teamId, team, roster, formations, teamNameDraft, newTeamName, newPlayerName,
-    newFormationName, newFormationTeamSize, historyNotice, formatTime, onClose, onActivateTeam,
+    newFormationName, newFormationTeamSize, onClose, onOpenAppSettings, onActivateTeam,
     onTeamNameDraftChange, onNewTeamNameChange, onNewPlayerNameChange,
     onNewFormationNameChange, onNewFormationTeamSizeChange, onAddTeam, onSaveTeamName, onRequestDeleteTeam,
     onUpdatePlayerNumber, onUpdatePlayerName, onRemovePlayer, onAddPlayer,
-    onRemoveFormation, onAddFormation, onSaveMatch,
-    onExportMatch, onDeleteMatch,
+    onRemoveFormation, onAddFormation,
   } = props;
   const visibleFormations = formations.filter((item) => item.teamSize === newFormationTeamSize);
   const formationLimitReached = visibleFormations.length >= MAX_FORMATIONS_PER_TEAM_SIZE;
@@ -67,39 +62,15 @@ export function SettingsDialog(props: SettingsDialogProps) {
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        {storageInfoOpen ? (
-          <>
-            <div className="settings-header">
-              <div><span className="eyebrow">SOVELLUKSEN TIEDOT</span><h2 id="settings-title">Tietosuoja ja tallennus</h2></div>
-              <button className="close-button" onClick={() => setStorageInfoOpen(false)}>Takaisin</button>
-            </div>
-            <div className="storage-info">
-              <section>
-                <h3>Tiedot pysyvät tällä laitteella</h3>
-                <p>Joukkueet, pelaajat, muodostelmat ja pelihistoria tallennetaan tämän selaimen paikalliseen tallennustilaan. Niitä ei lähetetä Peluuttimen palvelimelle.</p>
-              </section>
-              <section>
-                <h3>Pidä tiedot tallessa</h3>
-                <p>Selaimen sivustodatan tyhjentäminen tai selaimen poistaminen voi poistaa tallennetut tiedot. Peluutin ei tällä hetkellä tee niistä pilvivarmuuskopiota.</p>
-              </section>
-              <section>
-                <h3>Tietojen poistaminen</h3>
-                <p>Voit poistaa yksittäisiä pelejä tai kokonaisen joukkueen asetuksista. Kaikki tiedot voi poistaa myös tyhjentämällä Peluuttimen sivustodatan selaimen asetuksista.</p>
-              </section>
-              <section>
-                <h3>Pelaajien tiedot</h3>
-                <p>Lisää vain pelin seuraamiseen tarvittavat tiedot. Etunimi tai kutsumanimi ja pelinumero riittävät yleensä.</p>
-              </section>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="settings-header">
-              <div><span className="eyebrow">JOUKKUEET JA PELAAJAT</span><h2 id="settings-title">Asetukset</h2></div>
-              <button className="close-button" onClick={onClose}>Sulje</button>
-            </div>
-            <div className="settings-layout">
+      <section className="settings-modal team-management-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div className="settings-header">
+              <div><span className="eyebrow">PELAAJAT JA KOKOONPANOT</span><h2 id="settings-title">Joukkueet</h2></div>
+              <div className="settings-header-actions">
+                <button className="mobile-team-settings" aria-label="Asetukset" onClick={onOpenAppSettings}><Settings size={18} aria-hidden="true"/></button>
+                <button className="close-button" onClick={onClose}>Sulje</button>
+              </div>
+        </div>
+        <div className="settings-layout">
           <aside className="team-settings">
             <h3>Joukkueet</h3>
             <div className="team-list">
@@ -111,14 +82,14 @@ export function SettingsDialog(props: SettingsDialogProps) {
             </div>
             <div className="add-row">
               <input maxLength={NAME_MAX_LENGTH} value={newTeamName} onChange={(event) => onNewTeamNameChange(event.target.value)} placeholder="Esim. Testijoukkue FC" />
-              <button onClick={onAddTeam}>Lisää</button>
+              <button className="button-add" onClick={onAddTeam}>Lisää</button>
             </div>
           </aside>
           <div className="player-settings">
             <h3>Valittu joukkue</h3>
             <div className="team-name-row">
               <input maxLength={NAME_MAX_LENGTH} value={teamNameDraft} onChange={(event) => onTeamNameDraftChange(event.target.value)} aria-label="Joukkueen nimi" />
-              {teamNameDraft.trim() !== team.name && <button onClick={onSaveTeamName}>Tallenna nimi</button>}
+              {teamNameDraft.trim() !== team.name && <button className="button-primary" onClick={onSaveTeamName}>Tallenna nimi</button>}
               <button className="danger destructive-filled" onClick={onRequestDeleteTeam}>Poista joukkue</button>
             </div>
             <div className="player-editor-list">
@@ -134,7 +105,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
             </div>
             <div className="add-row player-add">
               <input maxLength={NAME_MAX_LENGTH} value={newPlayerName} onChange={(event) => onNewPlayerNameChange(event.target.value)} placeholder="Esim. Erkki" />
-              <button onClick={onAddPlayer}>Lisää pelaaja</button>
+              <button className="button-add" onClick={onAddPlayer}>Lisää pelaaja</button>
             </div>
 
             <section className="settings-section">
@@ -179,7 +150,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
                     : newFormationTeamSize === 5 ? "Esim. 1–2–1" : newFormationTeamSize === 8 ? "Esim. 4–2–1" : "Esim. 4–3–2–1"}
                   disabled={formationLimitReached}
                 />
-                <button disabled={formationLimitReached} onClick={addFormation}>Lisää muodostelma</button>
+                <button className="button-add" disabled={formationLimitReached} onClick={addFormation}>Lisää muodostelma</button>
               </div>
               {formationLimitReached && (
                 <p className="form-warning">
@@ -189,37 +160,8 @@ export function SettingsDialog(props: SettingsDialogProps) {
               {formationError && <p id="formation-error" className="field-error" role="alert">{formationError}</p>}
             </section>
 
-            <section className="settings-section">
-              <div className="section-title">
-                <div><span className="eyebrow">PAIKALLINEN TALLENNUS</span><h3>Pelihistoria</h3></div>
-                <div className="history-actions">
-                  <button className="history-save" onClick={onSaveMatch}>Tallenna peli</button>
-                </div>
-              </div>
-              {historyNotice && <p className="success-note">{historyNotice}</p>}
-              <div className="history-list">
-                {(team.history || []).length ? team.history.map((match) => (
-                  <article key={match.id}>
-                    <div>
-                      <strong>{new Date(match.playedAt).toLocaleDateString("fi-FI")} · {match.score[0]}–{match.score[1]}</strong>
-                      <span>{match.opponent} · {formatTime(match.duration)} · {match.formation}</span>
-                    </div>
-                    <div className="history-row-actions">
-                      <button onClick={() => onExportMatch(match)}>Vie Exceliin</button>
-                      <button className="danger destructive-filled" onClick={() => onDeleteMatch(match.id)}>Poista</button>
-                    </div>
-                  </article>
-                )) : <p className="empty-history">Ei vielä tallennettuja pelejä.</p>}
-              </div>
-            </section>
-            <button className="storage-info-link" onClick={() => setStorageInfoOpen(true)}>
-              <span><strong>Tietosuoja ja tallennus</strong><small>Miten tiedot säilytetään tällä laitteella</small></span>
-              <span aria-hidden="true">›</span>
-            </button>
           </div>
-            </div>
-          </>
-        )}
+        </div>
       </section>
     </div>
   );

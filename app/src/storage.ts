@@ -1,4 +1,4 @@
-import type { ActiveMatch, Formation, MatchRecord, Player, Score, Team, TeamSize, Venue } from "./types";
+import type { ActiveMatch, Formation, MatchRecord, Player, ScheduledMatch, Score, Team, TeamSize, Venue } from "./types";
 
 export const NAME_MAX_LENGTH = 60;
 export const FORMATION_MAX_LENGTH = 12;
@@ -83,6 +83,7 @@ export function parseActiveMatch(raw: string | null): ActiveMatch | null {
     ) return null;
 
     return {
+      scheduledMatchId: typeof value.scheduledMatchId === "string" ? value.scheduledMatchId : undefined,
       teamId: value.teamId,
       opponent: cleanName(value.opponent),
       venue: value.venue as Venue,
@@ -96,5 +97,38 @@ export function parseActiveMatch(raw: string | null): ActiveMatch | null {
     };
   } catch {
     return null;
+  }
+}
+
+export function parseScheduledMatches(raw: string | null): ScheduledMatch[] {
+  try {
+    const values: unknown = JSON.parse(raw || "[]");
+    if (!Array.isArray(values)) return [];
+    return values.flatMap((value): ScheduledMatch[] => {
+      if (
+        !isRecord(value)
+        || typeof value.id !== "string"
+        || typeof value.teamId !== "string"
+        || typeof value.opponent !== "string"
+        || typeof value.formation !== "string"
+        || typeof value.scheduledAt !== "string"
+        || Number.isNaN(Date.parse(value.scheduledAt))
+        || !["home", "away"].includes(String(value.venue))
+        || !Array.isArray(value.activePlayerIds)
+        || !Array.isArray(value.lineup)
+      ) return [];
+      return [{
+        id: value.id,
+        scheduledAt: value.scheduledAt,
+        teamId: value.teamId,
+        opponent: cleanName(value.opponent),
+        venue: value.venue as Venue,
+        formation: value.formation,
+        activePlayerIds: value.activePlayerIds as ScheduledMatch["activePlayerIds"],
+        lineup: value.lineup as ScheduledMatch["lineup"],
+      }];
+    }).sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt));
+  } catch {
+    return [];
   }
 }

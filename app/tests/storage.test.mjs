@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseActiveMatch, parseTeams } from "../src/storage.ts";
+import { parseActiveMatch, parseScheduledMatches, parseTeams } from "../src/storage.ts";
 
 const fallbackFormations = [{ id: "8-2–2–3", name: "2–2–3", teamSize: 8, slots: [] }];
 
@@ -24,6 +24,7 @@ test("bounds stored names and player numbers", () => {
 
 test("accepts a valid paused active match", () => {
   const match = {
+    scheduledMatchId: "scheduled-1",
     teamId: "team-1",
     opponent: " Testi ",
     venue: "home",
@@ -36,7 +37,9 @@ test("accepts a valid paused active match", () => {
     goals: { 1: 1 },
   };
 
-  assert.equal(parseActiveMatch(JSON.stringify(match)).opponent, "Testi");
+  const parsed = parseActiveMatch(JSON.stringify(match));
+  assert.equal(parsed.opponent, "Testi");
+  assert.equal(parsed.scheduledMatchId, "scheduled-1");
 });
 
 test("stores up to three formations for each supported team size", () => {
@@ -53,4 +56,14 @@ test("stores up to three formations for each supported team size", () => {
   }]), fallbackFormations);
 
   assert.deepEqual(team.formations.map(({ id }) => id), ["5a", "5b", "5c", "8a", "8b", "8c", "11a", "11b", "11c"]);
+});
+
+test("keeps valid scheduled matches in chronological order", () => {
+  const matches = [
+    { id: "later", scheduledAt: "2026-08-24T18:00:00.000Z", teamId: "team-1", opponent: "B", venue: "away", formation: "8-a", activePlayerIds: [1], lineup: [1] },
+    { id: "first", scheduledAt: "2026-08-23T10:00:00.000Z", teamId: "team-1", opponent: " A ", venue: "home", formation: "8-a", activePlayerIds: [1], lineup: [1] },
+  ];
+  const parsed = parseScheduledMatches(JSON.stringify(matches));
+  assert.deepEqual(parsed.map(({ id }) => id), ["first", "later"]);
+  assert.equal(parsed[0].opponent, "A");
 });

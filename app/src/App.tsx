@@ -2,17 +2,20 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
-import type { Formation, MatchRecord, PlayerId, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
+import type { Formation, MatchRecord, PlayerId, ScheduledMatch, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
 import { Onboarding } from "./components/Onboarding";
 import { PregameView } from "./components/PregameView";
 import { MatchWorkspace } from "./features/match/MatchWorkspace";
 import { NewMatchDialog } from "./features/match/NewMatchDialog";
+import { GamesDialog } from "./features/match/GamesDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
+import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { changePlayerGoal } from "./features/match/matchLogic";
+import { scheduledStartError } from "./features/match/scheduledDate";
 
 const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
@@ -30,6 +33,7 @@ const defaultFormations: Formation[] = [
 
 const initialTeams = matchRepository.loadTeams(defaultFormations);
 const initialActiveMatch = matchRepository.loadActiveMatch();
+const initialScheduledMatches = matchRepository.loadScheduledMatches();
 const initialTeam = initialTeams.find((team) => team.id === initialActiveMatch?.teamId) || initialTeams[0] || null;
 const restoredMatch = initialActiveMatch?.teamId === initialTeam?.id ? initialActiveMatch : null;
 
@@ -43,7 +47,11 @@ export function App() {
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
   const [onboardingTeamName, setOnboardingTeamName] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [appSettingsReturnToTeams, setAppSettingsReturnToTeams] = useState(false);
+  const [settingsTeamId, setSettingsTeamId] = useState(initialTeam?.id || "");
   const [newMatchOpen, setNewMatchOpen] = useState(false);
+  const [gamesOpen, setGamesOpen] = useState(false);
   const [endMatchOpen, setEndMatchOpen] = useState(false);
   const [discardMatchOpen, setDiscardMatchOpen] = useState(false);
   const [resetClockOpen, setResetClockOpen] = useState(false);
@@ -71,13 +79,21 @@ export function App() {
   const [score, setScore] = useState<Score>(restoredMatch?.score || [0, 0]);
   const [minutes, setMinutes] = useState(restoredMatch?.minutes || Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
+  const [scheduledMatches, setScheduledMatches] = useState<ScheduledMatch[]>(initialScheduledMatches);
+  const [activeScheduledMatchId, setActiveScheduledMatchId] = useState(restoredMatch?.scheduledMatchId);
 
   const homeTeam = teams.find((team) => team.id === teamId) || teams[0] || null;
+  const settingsTeam = teams.find((team) => team.id === settingsTeamId) || homeTeam;
   const roster = homeTeam?.players || [];
+  const settingsRoster = settingsTeam?.players || [];
   const byId = useMemo(() => Object.fromEntries(roster.map((p) => [p.id, p])), [roster]);
   const activeRoster = roster.filter((player) => activePlayerIds.includes(player.id));
   const bench = activeRoster.filter((p) => !lineup.includes(p.id));
   const teamFormations = (homeTeam?.formations || defaultFormations).map((item) => ({
+    ...item,
+    slots: createFormation(item.name, item.teamSize) || item.slots,
+  }));
+  const settingsFormations = (settingsTeam?.formations || defaultFormations).map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
@@ -102,6 +118,10 @@ export function App() {
   }, [teams]);
 
   useEffect(() => {
+    matchRepository.saveScheduledMatches(scheduledMatches);
+  }, [scheduledMatches]);
+
+  useEffect(() => {
     if (!historyNotice) return;
     const timer = window.setTimeout(() => setHistoryNotice(""), 3000);
     return () => window.clearTimeout(timer);
@@ -113,6 +133,7 @@ export function App() {
       return;
     }
     matchRepository.saveActiveMatch({
+      scheduledMatchId: activeScheduledMatchId,
       teamId: homeTeam.id,
       opponent,
       venue,
@@ -124,15 +145,15 @@ export function App() {
       minutes,
       goals,
     });
-  }, [matchCreated, matchEnded, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals]);
+  }, [matchCreated, matchEnded, activeScheduledMatchId, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals]);
 
   useEffect(() => {
-    const modalOpen = settingsOpen || newMatchOpen || endMatchOpen || discardMatchOpen || resetClockOpen || deleteTeamOpen;
+    const modalOpen = settingsOpen || appSettingsOpen || newMatchOpen || gamesOpen || endMatchOpen || discardMatchOpen || resetClockOpen || deleteTeamOpen;
     if (!modalOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previousOverflow; };
-  }, [settingsOpen, newMatchOpen, endMatchOpen, discardMatchOpen, resetClockOpen, deleteTeamOpen]);
+  }, [settingsOpen, appSettingsOpen, newMatchOpen, gamesOpen, endMatchOpen, discardMatchOpen, resetClockOpen, deleteTeamOpen]);
 
   useEffect(() => {
     if (!running) return;
@@ -163,6 +184,21 @@ export function App() {
     setRunning(false);
     setMatchEnded(false);
     setMatchCreated(false);
+    setActiveScheduledMatchId(undefined);
+  };
+
+  const openTeamSettings = () => {
+    if (!homeTeam) return;
+    setSettingsTeamId(homeTeam.id);
+    setTeamNameDraft(homeTeam.name);
+    setNewFormationTeamSize(activeFormation?.teamSize || 8);
+    setSettingsOpen(true);
+  };
+
+  const selectSettingsTeam = (nextTeam: Team) => {
+    setSettingsTeamId(nextTeam.id);
+    setTeamNameDraft(nextTeam.name);
+    setNewFormationTeamSize(nextTeam.formations?.[0]?.teamSize || 8);
   };
 
   const selectField = (index: number) => {
@@ -195,13 +231,19 @@ export function App() {
     setTeams((current) => current.map((team) => team.id === teamId ? change(team) : team));
   };
 
+  const updateSettingsTeam = (change: (team: Team) => Team) => {
+    setTeams((current) => current.map((team) => team.id === settingsTeamId ? change(team) : team));
+  };
+
   const addTeam = () => {
     const name = cleanName(newTeamName);
     if (!name) return;
     const team: Team = { id: `team-${Date.now()}`, name, players: [], formations: defaultFormations, history: [] };
     setTeams((current) => [...current, team]);
     setNewTeamName("");
-    activateTeam(team);
+    setSettingsTeamId(team.id);
+    setTeamNameDraft(team.name);
+    setNewFormationTeamSize(team.formations[0]?.teamSize || 8);
   };
 
   const createFirstTeam = () => {
@@ -211,14 +253,21 @@ export function App() {
     setTeams([team]);
     setOnboardingTeamName("");
     activateTeam(team);
+    setSettingsTeamId(team.id);
     setSettingsOpen(true);
   };
 
   const deleteTeam = () => {
-    const remaining = teams.filter((team) => team.id !== teamId);
+    const remaining = teams.filter((team) => team.id !== settingsTeamId);
     setTeams(remaining);
-    if (remaining.length) {
+    setScheduledMatches((current) => current.filter((match) => match.teamId !== settingsTeamId));
+    if (settingsTeamId === teamId && remaining.length) {
       activateTeam(remaining[0]);
+      setSettingsTeamId(remaining[0].id);
+      setTeamNameDraft(remaining[0].name);
+    } else if (remaining.length) {
+      setSettingsTeamId(remaining[0].id);
+      setTeamNameDraft(remaining[0].name);
     } else {
       setTeamId("");
       setTeamNameDraft("");
@@ -244,16 +293,20 @@ export function App() {
     const player = {
       id: Date.now(),
       name,
-      number: roster.reduce((max, item) => Math.max(max, item.number || 0), 0) + 1,
+      number: settingsRoster.reduce((max, item) => Math.max(max, item.number || 0), 0) + 1,
     };
-    updateCurrentTeam((team) => ({ ...team, players: [...team.players, player] }));
-    setMinutes((current) => ({ ...current, [player.id]: 0 }));
+    updateSettingsTeam((team) => ({ ...team, players: [...team.players, player] }));
+    if (settingsTeamId === teamId) {
+      setMinutes((current) => ({ ...current, [player.id]: 0 }));
+      if (newMatchOpen) setActivePlayerDraft((current) => [...current, player.id]);
+    }
     setNewPlayerName("");
   };
 
   const removePlayer = (playerId: PlayerId) => {
-    const remaining = roster.filter((player) => player.id !== playerId);
-    updateCurrentTeam((team) => ({ ...team, players: remaining }));
+    const remaining = settingsRoster.filter((player) => player.id !== playerId);
+    updateSettingsTeam((team) => ({ ...team, players: remaining }));
+    if (settingsTeamId !== teamId) return;
     setLineup((current) => {
       const next = current.filter((id) => id !== playerId);
       remaining.forEach((player) => {
@@ -265,23 +318,27 @@ export function App() {
   };
 
   const addFormation = () => {
-    if (teamFormations.filter((item) => item.teamSize === newFormationTeamSize).length >= MAX_FORMATIONS_PER_TEAM_SIZE) return;
+    if (settingsFormations.filter((item) => item.teamSize === newFormationTeamSize).length >= MAX_FORMATIONS_PER_TEAM_SIZE) return;
     const normalizedName = newFormationName.trim().slice(0, FORMATION_MAX_LENGTH).replaceAll("-", "–");
     const nextSlots = createFormation(normalizedName, newFormationTeamSize);
-    if (!nextSlots || teamFormations.some((item) => item.name === normalizedName && item.teamSize === newFormationTeamSize)) return;
+    if (!nextSlots || settingsFormations.some((item) => item.name === normalizedName && item.teamSize === newFormationTeamSize)) return;
     const id = `${newFormationTeamSize}-${normalizedName}`;
-    updateCurrentTeam((team) => ({
+    updateSettingsTeam((team) => ({
       ...team,
-      formations: [...teamFormations, { id, name: normalizedName, teamSize: newFormationTeamSize, slots: nextSlots }],
+      formations: [...settingsFormations, { id, name: normalizedName, teamSize: newFormationTeamSize, slots: nextSlots }],
     }));
     setNewFormationName("");
   };
 
   const removeFormation = (formationId: string) => {
-    if (teamFormations.length === 1) return;
-    const remaining = teamFormations.filter((item) => item.id !== formationId);
-    updateCurrentTeam((team) => ({ ...team, formations: remaining }));
-    if (formation === formationId) setFormation(remaining[0].id);
+    if (settingsFormations.length === 1) return;
+    const remaining = settingsFormations.filter((item) => item.id !== formationId);
+    updateSettingsTeam((team) => ({ ...team, formations: remaining }));
+    if (settingsTeamId === teamId && formation === formationId) {
+      const nextFormation = remaining.find((item) => item.teamSize === activeFormation?.teamSize) || remaining[0];
+      setFormation(nextFormation.id);
+      setLineup((current) => reorderLineup(current, slots, nextFormation.slots));
+    }
   };
 
   const currentMatchData = (): MatchRecord => ({
@@ -311,12 +368,15 @@ export function App() {
     setRunning(false);
     saveMatch();
     setMatchEnded(true);
+    if (activeScheduledMatchId) setScheduledMatches((current) => current.filter((item) => item.id !== activeScheduledMatchId));
+    setActiveScheduledMatchId(undefined);
     setEndMatchOpen(false);
   };
 
   const discardMatch = () => {
     setRunning(false);
     setMatchEnded(true);
+    setActiveScheduledMatchId(undefined);
     setEndMatchOpen(false);
     setDiscardMatchOpen(false);
     setHistoryNotice("Peli lopetettiin tallentamatta.");
@@ -328,17 +388,19 @@ export function App() {
     setResetClockOpen(false);
   };
 
-  const deleteMatch = (matchId: string) => {
-    updateCurrentTeam((team) => ({ ...team, history: (team.history || []).filter((match) => match.id !== matchId) }));
+  const deleteMatch = (historyTeamId: string, matchId: string) => {
+    setTeams((current) => current.map((team) => team.id === historyTeamId
+      ? { ...team, history: (team.history || []).filter((match) => match.id !== matchId) }
+      : team));
     setHistoryNotice("Peli poistettu historiasta.");
   };
 
-  const exportMatch = async (match: MatchRecord) => {
+  const exportMatch = async (match: MatchRecord, teamName = homeTeam.name) => {
     try {
-      const xlsx = await buildMatchXlsx(match, homeTeam.name);
+      const xlsx = await buildMatchXlsx(match, teamName);
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([xlsx], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-      link.download = `${homeTeam.name}-${match.playedAt.slice(0, 10)}.xlsx`;
+      link.download = `${teamName}-${match.playedAt.slice(0, 10)}.xlsx`;
       document.body.append(link);
       link.click();
       link.remove();
@@ -358,7 +420,7 @@ export function App() {
 
   const createMatch = (formationId: string, startingLineup: PlayerId[]) => {
     const nextOpponent = cleanName(opponentDraft);
-    if (!nextOpponent) return;
+    if (!nextOpponent || (matchCreated && !matchEnded)) return;
     setOpponent(nextOpponent);
     setVenue(venueDraft);
     setActivePlayerIds(activePlayerDraft);
@@ -372,8 +434,53 @@ export function App() {
     setRunning(false);
     setMatchEnded(false);
     setMatchCreated(true);
+    setActiveScheduledMatchId(undefined);
     setHistoryNotice("");
     setNewMatchOpen(false);
+  };
+
+  const scheduleMatch = (scheduledAt: string, formationId: string, startingLineup: PlayerId[]) => {
+    const nextOpponent = cleanName(opponentDraft);
+    if (!nextOpponent || !homeTeam || scheduledStartError(new Date(scheduledAt), homeTeam.id, scheduledMatches)) return;
+    const scheduled: ScheduledMatch = {
+      id: `scheduled-${Date.now()}`,
+      scheduledAt,
+      teamId: homeTeam.id,
+      opponent: nextOpponent,
+      venue: venueDraft,
+      formation: formationId,
+      activePlayerIds: activePlayerDraft,
+      lineup: startingLineup,
+    };
+    setScheduledMatches((current) => [...current, scheduled].sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt)));
+    setHistoryNotice("Peli lisättiin tuleviin peleihin.");
+    setNewMatchOpen(false);
+  };
+
+  const openScheduledMatch = (scheduled: ScheduledMatch) => {
+    const team = teams.find((item) => item.id === scheduled.teamId);
+    if (!team) return;
+    const teamFormation = team.formations.find((item) => item.id === scheduled.formation) || team.formations[0];
+    const playerIds = new Set(team.players.map((player) => player.id));
+    const nextActive = scheduled.activePlayerIds.filter((id) => playerIds.has(id));
+    const nextLineup = scheduled.lineup.filter((id) => playerIds.has(id));
+    nextActive.forEach((id) => { if (nextLineup.length < teamFormation.slots.length && !nextLineup.includes(id)) nextLineup.push(id); });
+    setTeamId(team.id);
+    setOpponent(scheduled.opponent);
+    setVenue(scheduled.venue);
+    setActivePlayerIds(nextActive);
+    setFormation(teamFormation.id);
+    setLineup(nextLineup.slice(0, teamFormation.slots.length));
+    setSeconds(0);
+    setScore([0, 0]);
+    setMinutes(Object.fromEntries(team.players.map((player) => [player.id, 0])));
+    setGoals({});
+    setSelected(null);
+    setRunning(false);
+    setMatchEnded(false);
+    setMatchCreated(true);
+    setActiveScheduledMatchId(scheduled.id);
+    setGamesOpen(false);
   };
 
   const ownScoreIndex = venue === "home" ? 0 : 1;
@@ -396,10 +503,10 @@ export function App() {
   };
 
   const saveTeamName = () => {
-    updateCurrentTeam((team) => ({ ...team, name: cleanName(teamNameDraft) || team.name }));
+    updateSettingsTeam((team) => ({ ...team, name: cleanName(teamNameDraft) || team.name }));
   };
   const updatePlayerNumber = (playerId: PlayerId, number: number) => {
-    updateCurrentTeam((team) => ({
+    updateSettingsTeam((team) => ({
       ...team,
       players: team.players.map((player) => player.id === playerId
         ? { ...player, number: Math.min(99, Math.max(0, number)) }
@@ -407,7 +514,7 @@ export function App() {
     }));
   };
   const updatePlayerName = (playerId: PlayerId, name: string) => {
-    updateCurrentTeam((team) => ({
+    updateSettingsTeam((team) => ({
       ...team,
       players: team.players.map((player) => player.id === playerId
         ? { ...player, name: name.slice(0, NAME_MAX_LENGTH) }
@@ -457,10 +564,10 @@ export function App() {
         onToggleClock={() => setRunning(!running)}
         onEndMatch={() => setEndMatchOpen(true)}
         onNewMatch={openNewMatch}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenTeams={openTeamSettings}
+        onOpenGames={() => setGamesOpen(true)}
+        onOpenSettings={() => { setAppSettingsReturnToTeams(false); setAppSettingsOpen(true); }}
         onOpenExercises={openExercises}
-        theme={theme}
-        onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
       {!matchCreated ? (
@@ -468,7 +575,11 @@ export function App() {
           hasPlayers={roster.length > 0}
           teamName={homeTeam.name}
           onNewMatch={openNewMatch}
-          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenSettings={openTeamSettings}
+          scheduledMatches={scheduledMatches}
+          teams={teams}
+          onOpenScheduledMatch={openScheduledMatch}
+          onDeleteScheduledMatch={(id) => setScheduledMatches((current) => current.filter((item) => item.id !== id))}
         />
       ) : (
         <MatchWorkspace
@@ -496,9 +607,8 @@ export function App() {
 
       <MobileNav
         onNewMatch={openNewMatch}
-        onOpenSettings={() => setSettingsOpen(true)}
-        theme={theme}
-        onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+        onOpenTeams={openTeamSettings}
+        onOpenGames={() => setGamesOpen(true)}
       />
 
       {newMatchOpen && (
@@ -511,12 +621,36 @@ export function App() {
           roster={roster}
           formations={teamFormations}
           initialFormationId={formation}
+          scheduledMatches={scheduledMatches}
+          canStartNow={!matchCreated || matchEnded}
           onSelectTeam={activateTeam}
           onOpponentChange={setOpponentDraft}
           onVenueChange={setVenueDraft}
           onActivePlayerIdsChange={setActivePlayerDraft}
+          onAddPlayers={openTeamSettings}
           onCreate={createMatch}
+          onSchedule={scheduleMatch}
           onClose={() => setNewMatchOpen(false)}
+        />
+      )}
+
+      {gamesOpen && (
+        <GamesDialog
+          matches={scheduledMatches}
+          teams={teams}
+          canOpen={!matchCreated || matchEnded}
+          activeScheduledMatchId={activeScheduledMatchId}
+          currentTeamId={teamId}
+          canSaveMatch={matchCreated}
+          historyNotice={historyNotice}
+          formatTime={formatTime}
+          onNewMatch={() => { setGamesOpen(false); openNewMatch(); }}
+          onOpen={openScheduledMatch}
+          onDelete={(id) => setScheduledMatches((current) => current.filter((item) => item.id !== id))}
+          onSaveMatch={saveMatch}
+          onExportMatch={exportMatch}
+          onDeleteMatch={deleteMatch}
+          onClose={() => setGamesOpen(false)}
         />
       )}
 
@@ -563,7 +697,7 @@ export function App() {
 
       {deleteTeamOpen && (
         <ConfirmDialog
-          title={`Poistetaanko ${homeTeam.name}?`}
+          title={`Poistetaanko ${settingsTeam?.name || "joukkue"}?`}
           description="Joukkueen kaikki pelaajat, muodostelmat ja pelihistoria poistetaan tältä laitteelta. Tätä ei voi perua."
           confirmLabel="Poista joukkue pysyvästi"
           cancelLabel="Peruuta"
@@ -572,22 +706,21 @@ export function App() {
         />
       )}
 
-      {settingsOpen && (
+      {settingsOpen && settingsTeam && (
         <SettingsDialog
           teams={teams}
-          teamId={teamId}
-          team={homeTeam}
-          roster={roster}
-          formations={teamFormations}
+          teamId={settingsTeam.id}
+          team={settingsTeam}
+          roster={settingsRoster}
+          formations={settingsFormations}
           teamNameDraft={teamNameDraft}
           newTeamName={newTeamName}
           newPlayerName={newPlayerName}
           newFormationName={newFormationName}
           newFormationTeamSize={newFormationTeamSize}
-          historyNotice={historyNotice}
-          formatTime={formatTime}
           onClose={() => setSettingsOpen(false)}
-          onActivateTeam={activateTeam}
+          onOpenAppSettings={() => { setSettingsOpen(false); setAppSettingsReturnToTeams(true); setAppSettingsOpen(true); }}
+          onActivateTeam={selectSettingsTeam}
           onTeamNameDraftChange={setTeamNameDraft}
           onNewTeamNameChange={setNewTeamName}
           onNewPlayerNameChange={setNewPlayerName}
@@ -602,9 +735,18 @@ export function App() {
           onAddPlayer={addPlayer}
           onRemoveFormation={removeFormation}
           onAddFormation={addFormation}
-          onSaveMatch={saveMatch}
-          onExportMatch={exportMatch}
-          onDeleteMatch={deleteMatch}
+        />
+      )}
+      {appSettingsOpen && (
+        <AppSettingsDialog
+          theme={theme}
+          closeLabel={appSettingsReturnToTeams ? "Takaisin" : "Sulje"}
+          onThemeChange={setTheme}
+          onClose={() => {
+            setAppSettingsOpen(false);
+            if (appSettingsReturnToTeams) setSettingsOpen(true);
+            setAppSettingsReturnToTeams(false);
+          }}
         />
       )}
     </main>

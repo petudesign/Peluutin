@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { NAME_MAX_LENGTH } from "../../storage";
-import type { Formation, Player, PlayerId, Team, TeamSize, Venue } from "../../types";
+import type { Formation, Player, PlayerId, ScheduledMatch, Team, TeamSize, Venue } from "../../types";
+import { formatScheduledDate, parseScheduledDate, scheduledStartError } from "./scheduledDate";
+
+const defaultScheduledAt = () => {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setMinutes(0, 0, 0);
+  return { date: formatScheduledDate(date), time: `${String(date.getHours()).padStart(2, "0")}:00` };
+};
 
 interface NewMatchDialogProps {
   teams: Team[];
@@ -11,11 +18,15 @@ interface NewMatchDialogProps {
   roster: Player[];
   formations: Formation[];
   initialFormationId: string;
+  scheduledMatches: ScheduledMatch[];
+  canStartNow: boolean;
   onSelectTeam: (team: Team) => void;
   onOpponentChange: (opponent: string) => void;
   onVenueChange: (venue: Venue) => void;
   onActivePlayerIdsChange: (ids: PlayerId[]) => void;
+  onAddPlayers: () => void;
   onCreate: (formationId: string, lineup: PlayerId[]) => void;
+  onSchedule: (scheduledAt: string, formationId: string, lineup: PlayerId[]) => void;
   onClose: () => void;
 }
 
@@ -28,11 +39,15 @@ export function NewMatchDialog({
   roster,
   formations,
   initialFormationId,
+  scheduledMatches,
+  canStartNow,
   onSelectTeam,
   onOpponentChange,
   onVenueChange,
   onActivePlayerIdsChange,
+  onAddPlayers,
   onCreate,
+  onSchedule,
   onClose,
 }: NewMatchDialogProps) {
   const initialFormation = formations.find((item) => item.id === initialFormationId) || formations[0];
@@ -41,13 +56,20 @@ export function NewMatchDialog({
   const availableFormations = formations.filter((item) => item.teamSize === teamSize);
   const [formationId, setFormationId] = useState(initialFormation?.id || "");
   const [lineup, setLineup] = useState<PlayerId[]>([]);
+  const [initialSchedule] = useState(defaultScheduledAt);
+  const [scheduledDate, setScheduledDate] = useState(initialSchedule.date);
+  const [scheduledTime, setScheduledTime] = useState(initialSchedule.time);
   const selectedFormation = availableFormations.find((item) => item.id === formationId) || availableFormations[0];
   const requiredPlayers = selectedFormation?.slots.length || 0;
   const canCreate = Boolean(opponent.trim() && requiredPlayers && activePlayerIds.length >= requiredPlayers);
+  const needsMorePlayers = roster.length < requiredPlayers;
   const automaticLineup = activePlayerIds.slice(0, requiredPlayers);
   const activePlayersAlphabetically = roster
     .filter((player) => activePlayerIds.includes(player.id))
     .sort((a, b) => a.name.localeCompare(b.name, "fi", { sensitivity: "base" }));
+  const scheduledAt = parseScheduledDate(scheduledDate, scheduledTime);
+  const scheduleError = scheduledStartError(scheduledAt, teamId, scheduledMatches);
+  const canSchedule = canCreate && !scheduleError;
 
   useEffect(() => {
     if (!availableFormations.some((item) => item.id === formationId)) {
@@ -66,6 +88,11 @@ export function NewMatchDialog({
   const openLineup = () => {
     setLineup(automaticLineup);
     setStep("lineup");
+  };
+
+  const schedule = (selectedLineup: PlayerId[]) => {
+    if (!scheduledAt || !canSchedule) return;
+    onSchedule(scheduledAt.toISOString(), formationId, selectedLineup);
   };
 
   const changeLineupPlayer = (index: number, playerId: PlayerId) => {
@@ -88,7 +115,7 @@ export function NewMatchDialog({
             </button>
           )}
           <div>
-            <span className="eyebrow">{step === "details" ? "OTTELU" : "KOKOONPANO"}</span>
+            {step === "lineup" && <span className="eyebrow">KOKOONPANO</span>}
             <h2 id="new-match-title">{step === "details" ? "Luo uusi peli" : "Muokkaa aloituskokoonpanoa"}</h2>
           </div>
           {step === "details" && <button className="close-button" onClick={onClose}>Sulje</button>}
@@ -140,6 +167,14 @@ export function NewMatchDialog({
                 <button type="button" className={venue === "away" ? "active" : ""} onClick={() => onVenueChange("away")}>Vieraissa</button>
               </div>
             </fieldset>
+            <fieldset className="schedule-section">
+              <legend>Ajankohta tulevaa peliä varten</legend>
+              <div className="schedule-fields">
+                <label><span>Päivä</span><input inputMode="numeric" autoComplete="off" placeholder="pp/kk/vvvv" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value.slice(0, 10))} /></label>
+                <label><span>Aika</span><input inputMode="numeric" autoComplete="off" placeholder="16:00" value={scheduledTime} onChange={(event) => setScheduledTime(event.target.value.slice(0, 5))} /></label>
+              </div>
+              {scheduleError && <small className="schedule-hint form-warning">{scheduleError}</small>}
+            </fieldset>
             <fieldset>
               <div className="attendance-heading">
                 <legend>Aktiiviset pelaajat</legend>
@@ -158,8 +193,16 @@ export function NewMatchDialog({
                 <p className="form-warning">Valitse vähintään {requiredPlayers} pelaajaa tähän pelimuotoon.</p>
               )}
             </fieldset>
-            <button className="create-match-button" disabled={!canCreate} onClick={() => onCreate(formationId, automaticLineup)}>Luo peli</button>
-            <button className="lineup-edit-trigger" disabled={!canCreate} onClick={openLineup}>Muokkaa aloituskokoonpanoa</button>
+            <button className="create-match-button" disabled={!canCreate || !canStartNow} onClick={() => onCreate(formationId, automaticLineup)}>Luo peli nyt</button>
+            {!canStartNow && <small className="schedule-hint">Nykyinen peli pitää lopettaa ennen uuden pelin aloittamista. Voit silti tallentaa tämän tulevaksi peliksi.</small>}
+            <button className="schedule-match-button" disabled={!canSchedule} onClick={() => schedule(automaticLineup)}>Tallenna tulevaksi peliksi</button>
+            <button
+              className="lineup-edit-trigger"
+              disabled={!needsMorePlayers && !canCreate}
+              onClick={needsMorePlayers ? onAddPlayers : openLineup}
+            >
+              {needsMorePlayers ? "Lisää pelaajia" : "Muokkaa aloituskokoonpanoa"}
+            </button>
           </>
         ) : (
           <>
@@ -190,7 +233,8 @@ export function NewMatchDialog({
                 </label>
               ))}
             </div>
-            <button className="create-match-button" onClick={() => onCreate(formationId, lineup)}>Luo peli tällä kokoonpanolla</button>
+            <button className="create-match-button" disabled={!canStartNow} onClick={() => onCreate(formationId, lineup)}>Luo peli tällä kokoonpanolla</button>
+            <button className="schedule-match-button" disabled={!canSchedule} onClick={() => schedule(lineup)}>Tallenna tulevaksi peliksi</button>
           </>
         )}
       </section>
