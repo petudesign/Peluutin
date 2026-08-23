@@ -84,13 +84,13 @@ käyttöönottoa.
 
 | Kohta | Kuvaus |
 | --- | --- |
-| Tiedot | Ennalta nimetyt tapahtumat sovelluksen avaamisesta, osion avaamisesta, joukkueen ja ottelun luomisesta sekä ottelun päättämisestä. Ominaisuudet on rajattu lajiin, osioon, tapahtuman lähteeseen, tallennusvalintaan ja karkeaan kestoluokkaan. PostHog lisää tapahtumiin teknisiä selain- ja laitetietoja. |
-| Tarkoitus | Löytää ensikäytön keskeytyskohdat ja ymmärtää ydintoimintojen käyttöä. |
+| Tiedot | Ennalta nimetyt tapahtumat sovelluksen avaamisesta, osion avaamisesta, joukkueen ja ottelun luomisesta sekä ottelun päättämisestä. Lisäksi käsittelemättömän teknisen virheen tyyppi, stack trace, sovellusversio ja Reactin juuritason virheen rajaus. Ominaisuudet on rajattu lajiin, osioon, tapahtuman lähteeseen, tallennusvalintaan ja karkeaan kestoluokkaan. PostHog lisää tapahtumiin teknisiä selain- ja laitetietoja. |
+| Tarkoitus | Löytää ensikäytön keskeytyskohdat, ymmärtää ydintoimintojen käyttöä ja paikantaa sovelluksen teknisiä virheitä. |
 | Sijainti | PostHog EU Cloud, kun `VITE_POSTHOG_KEY` on asetettu tuotantoympäristöön. |
 | Siirtoreitti | Selain lähettää tapahtumat saman alkuperän `/rinki`-polkuun. Vercel välittää pyynnöt PostHogin EU-ingest-palveluun. Näin tiukka `connect-src 'self'` -suojaus säilyy. |
 | Pääsy | Peluuttimen PostHog-projektiin oikeutettu ylläpitäjä. |
 | Käynnistyminen | Vain käyttäjän nimenomaisen valinnan jälkeen. Valinnan voi muuttaa Peluuttimen asetuksissa. |
-| Rajaus | Automaattinen klikkausten keruu, session replay, poikkeusten automaattikeruu ja henkilöprofiilit ovat pois käytöstä. Pelaajien, joukkueiden ja vastustajien nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä. |
+| Rajaus | Automaattinen klikkausten keruu, session replay, console-virheiden keruu ja henkilöprofiilit ovat pois käytöstä. Poikkeuksista kerätään vain käsittelemättömät virheet ja promise-hylkäykset käyttäjän suostumuksen jälkeen. Virheviestin sisältö ja virhettä edeltävät vapaamuotoiset vaiheet poistetaan selaimessa ennen lähetystä; virheen tyyppi ja stack trace säilytetään paikantamista varten. Pelaajien, joukkueiden ja vastustajien nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä. |
 | Säilytys | **[Määritä PostHog-projektin säilytysaika ennen tuotantokäyttöä.]** |
 
 ### Sallittu tapahtumaluettelo, skeemaversio 1
@@ -103,6 +103,7 @@ käyttöönottoa.
 | `team_created` | `source`, `sport`, `schema_version` |
 | `match_created` | `source`, `sport`, `schema_version` |
 | `match_completed` | `saved`, `duration_bucket`, `sport`, `schema_version` |
+| `$exception` | PostHogin virhetyyppi ja stack trace; redaktoitu viesti, `app_version`, mahdollinen `boundary` |
 
 ## Tuleva pilvitallennus — ei vielä käytössä
 
@@ -126,6 +127,7 @@ palvelimelle ratkaistaan vähintään:
 2. Täydennetään rekisterinpitäjän tiedot ja julkaistaan tietosuojaseloste.
 3. Tarkistetaan PostHogin käsittelyehdot ja alihankkijat.
 4. Testataan selaimen verkkotyökaluilla, ettei verkkoon lähde nimiä tai muuta kiellettyä sisältöä.
+5. Määritetään tuotannon source map -julkaisu, jotta minifioidut stack tracet voidaan yhdistää lähdekoodiin.
 
 ## Muutosloki
 
@@ -133,3 +135,7 @@ palvelimelle ratkaistaan vähintään:
   Vercel Web Analyticsista ja suunnitellun käyttöanalytiikan rajoista.
 - 23.8.2026: Lisätty suostumukseen perustuvan PostHog EU Cloud -integraation
   tapahtumaluettelo ja tekniset suojaukset.
+- 23.8.2026: Lisätty suostumukseen sidottu teknisten poikkeusten keruu,
+  virheviestien selaimessa tehtävä redaktointi ja sovellusversion seuranta.
+  Suostumusversio nostettiin, jotta lupa pyydetään myös nykyisiltä käyttäjiltä
+  uudelleen laajentuneelle tietoryhmälle.

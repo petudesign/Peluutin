@@ -16,8 +16,9 @@ export function AnalyticsConsent() {
       <div>
         <strong id="analytics-consent-title">Saammeko kerätä nimetöntä käyttötietoa?</strong>
         <p>
-          Tieto auttaa löytämään Peluuttimen hankalat kohdat. Pelaajien, joukkueiden tai vastustajien nimiä
-          eikä kirjoittamiasi tekstejä lähetetä analytiikkaan.
+          Tieto auttaa löytämään Peluuttimen hankalat kohdat ja tekniset virheet. Virheistä lähetetään
+          koodikohta ja laitteen teknisiä tietoja, mutta virheviestin sisältö poistetaan. Pelaajien,
+          joukkueiden tai vastustajien nimiä eikä kirjoittamiasi tekstejä lähetetä analytiikkaan.
         </p>
       </div>
       <div className="analytics-consent__actions">

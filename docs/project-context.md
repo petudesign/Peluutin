@@ -25,8 +25,8 @@ käyttöanalytiikka ovat eri käsitteitä:
 - Ei käyttäjätilejä eikä pilvisynkronointia.
 - Joukkue-, pelaaja-, ottelu- ja harjoitetiedot tallennetaan selaimeen.
 - Vercel Web Analytics mittaa liikenteen perustasoa.
-- PostHog-integraatio kerää suostumuksen jälkeen vain ennalta määritettyjä
-  tuotetapahtumia EU Cloudiin.
+- PostHog-integraatio kerää suostumuksen jälkeen ennalta määritettyjä
+  tuotetapahtumia ja redaktoituja teknisiä poikkeuksia EU Cloudiin.
 
 ## Analytiikan päätökset
 
@@ -34,8 +34,10 @@ käyttöanalytiikka ovat eri käsitteitä:
   PostHogia suoraan.
 - Kaikissa omissa tapahtumissa on `sport` ja `schema_version`, jotta uusia
   lajeja ja skeemamuutoksia voidaan erotella myöhemmin.
-- Autocapture, session replay, automaattinen virhekeruu ja henkilöprofiilit
-  ovat pois käytöstä.
+- Klikkausten autocapture, session replay, console-virheiden keruu ja
+  henkilöprofiilit ovat pois käytöstä. Käsittelemättömät JavaScript-virheet ja
+  promise-hylkäykset kerätään suostumuksen jälkeen; virheviesti redaktoidaan,
+  mutta virheen tyyppi, stack trace ja sovellusversio säilytetään.
 - Nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä.
 - PostHog ladataan vasta käyttäjän suostumuksen jälkeen, jotta se ei kasvata
   ydinnäkymän alkulatausta turhaan.
@@ -46,8 +48,8 @@ käyttöanalytiikka ovat eri käsitteitä:
 
 ## Seuraavat tärkeät vaiheet
 
-1. Testaa PostHog Preview-deploymentissa ja varmista verkkopyynnöistä, ettei
-   kiellettyä tietoa lähde palveluun.
+1. Testaa tekninen poikkeus Preview-deploymentissa ja varmista PostHogista,
+   että viesti on redaktoitu eikä kiellettyä tietoa lähde palveluun.
 2. Määritä PostHog-tapahtumien säilytysaika ja täydennä tietosuojaseloste.
 3. Julkaise tietosuojaseloste sovelluksessa ennen tuotantokeruun aloittamista.
 4. Määritä ensimmäisen käyttöönoton funnel ja sen päätöksenteossa käytettävät

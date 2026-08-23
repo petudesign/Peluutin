@@ -46,10 +46,14 @@ joukkueiden tai vastustajien nimiä eikä lomakkeisiin kirjoitettua sisältöä.
 
 Käyttäjän erillisellä suostumuksella Peluutin lähettää PostHog EU Cloudiin
 ennalta määritettyjä tapahtumia sovelluksen ja sen ydintoimintojen käytöstä.
-Automaattinen klikkausten keruu, istuntotallenteet, virheiden automaattikeruu
-ja henkilöprofiilit on poistettu käytöstä. Ottelun tarkkaa kestoa ei lähetetä,
-vaan ainoastaan karkea kestoluokka. Suostumuksen voi antaa, evätä tai muuttaa
-Peluuttimen asetuksissa.
+Suostumuksen jälkeen Peluutin kerää myös käsittelemättömiä teknisiä virheitä.
+Virheestä lähetetään virheen tyyppi, koodin stack trace, Peluuttimen versio sekä
+selaimen lisäämä tekninen laite- ja istuntotieto. Virheviestin sisältö ja
+mahdolliset sitä edeltävät vapaamuotoiset virhevaiheet poistetaan selaimessa
+ennen lähettämistä. Automaattinen klikkausten keruu, istuntotallenteet,
+console-viestien keruu ja henkilöprofiilit on poistettu käytöstä. Ottelun
+tarkkaa kestoa ei lähetetä, vaan ainoastaan karkea kestoluokka. Suostumuksen
+voi antaa, evätä tai muuttaa Peluuttimen asetuksissa.
 
 Käsittelyn tarkoitus on ymmärtää Peluuttimen liikennettä, laitejakaumaa ja
 teknistä käyttöä sekä parantaa palvelun käytettävyyttä.

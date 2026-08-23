@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { App } from "./App";
 import { analytics } from "./analytics";
 import { AnalyticsConsent } from "./components/AnalyticsConsent";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -13,7 +14,9 @@ analytics.init();
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
     <AnalyticsConsent />
     <Analytics />
   </React.StrictMode>,

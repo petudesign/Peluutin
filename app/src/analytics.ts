@@ -1,7 +1,7 @@
 import type { PostHog } from "posthog-js";
-import { matchDurationBucket, type MatchDurationBucket } from "./analyticsEvents";
+import { matchDurationBucket, sanitizeAnalyticsEvent, type MatchDurationBucket } from "./analyticsEvents";
 
-const CONSENT_KEY = "peluutin-analytics-consent-v1";
+const CONSENT_KEY = "peluutin-analytics-consent-v2";
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
 const POSTHOG_HOST = "/rinki";
 
@@ -27,7 +27,12 @@ const getClient = () => {
       api_host: POSTHOG_HOST,
       ui_host: "https://eu.posthog.com",
       autocapture: false,
-      capture_exceptions: false,
+      before_send: sanitizeAnalyticsEvent,
+      capture_exceptions: {
+        capture_console_errors: false,
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+      },
       capture_pageleave: false,
       capture_pageview: false,
       disable_session_recording: true,
@@ -80,6 +85,7 @@ export const analytics = {
     void getClient()?.then((posthog) => {
       if (analytics.getConsent() !== "granted") return;
       posthog.capture(event, {
+        app_version: __APP_VERSION__,
         schema_version: 1,
         sport: "football",
         ...properties,
@@ -89,5 +95,13 @@ export const analytics = {
 
   matchCompleted: (saved: boolean, seconds: number) => {
     analytics.track("match_completed", { saved, duration_bucket: matchDurationBucket(seconds) });
+  },
+
+  captureException: (error: unknown, boundary: "root") => {
+    if (analytics.getConsent() !== "granted") return;
+    void getClient()?.then((posthog) => {
+      if (analytics.getConsent() !== "granted") return;
+      posthog.captureException(error, { app_version: __APP_VERSION__, boundary });
+    });
   },
 };

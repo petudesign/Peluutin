@@ -1511,3 +1511,23 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
     flex: 1;
   }
 }
+/* Root-level recovery shown only when React cannot render the application. */
+.app-error {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+
+.app-error h1,
+.app-error p {
+  margin: 0;
+}
+
+.app-error button {
+  justify-self: center;
+}
