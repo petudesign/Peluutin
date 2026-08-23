@@ -1,5 +1,9 @@
 # Peluutin analytics
 
+See also the current [data inventory](data-inventory.md) and the Finnish
+[privacy notice draft](privacy-notice-draft-fi.md). The data inventory is the
+source of truth for what is implemented versus only planned.
+
 ## Purpose
 
 Analytics should help improve Peluutin's user experience without identifying
