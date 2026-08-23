@@ -12,10 +12,18 @@ if (!root) throw new Error("Root element not found");
 
 analytics.init();
 
+const PreviewApp = () => {
+  const isPreviewTest = window.location.hostname.endsWith(".vercel.app")
+    && window.location.hostname !== "peluutin.vercel.app"
+    && new URLSearchParams(window.location.search).has("test-error-tracking");
+  if (isPreviewTest) throw new Error("PRIVATE_CANARY_error_tracking_test");
+  return <App />;
+};
+
 createRoot(root).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <App />
+      <PreviewApp />
     </AppErrorBoundary>
     <AnalyticsConsent />
     <Analytics />
