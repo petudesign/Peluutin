@@ -87,6 +87,7 @@ käyttöönottoa.
 | Tiedot | Ennalta nimetyt tapahtumat sovelluksen avaamisesta, osion avaamisesta, joukkueen ja ottelun luomisesta sekä ottelun päättämisestä. Ominaisuudet on rajattu lajiin, osioon, tapahtuman lähteeseen, tallennusvalintaan ja karkeaan kestoluokkaan. PostHog lisää tapahtumiin teknisiä selain- ja laitetietoja. |
 | Tarkoitus | Löytää ensikäytön keskeytyskohdat ja ymmärtää ydintoimintojen käyttöä. |
 | Sijainti | PostHog EU Cloud, kun `VITE_POSTHOG_KEY` on asetettu tuotantoympäristöön. |
+| Siirtoreitti | Selain lähettää tapahtumat saman alkuperän `/rinki`-polkuun. Vercel välittää pyynnöt PostHogin EU-ingest-palveluun. Näin tiukka `connect-src 'self'` -suojaus säilyy. |
 | Pääsy | Peluuttimen PostHog-projektiin oikeutettu ylläpitäjä. |
 | Käynnistyminen | Vain käyttäjän nimenomaisen valinnan jälkeen. Valinnan voi muuttaa Peluuttimen asetuksissa. |
 | Rajaus | Automaattinen klikkausten keruu, session replay, poikkeusten automaattikeruu ja henkilöprofiilit ovat pois käytöstä. Pelaajien, joukkueiden ja vastustajien nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä. |

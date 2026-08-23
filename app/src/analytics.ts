@@ -3,7 +3,7 @@ import { matchDurationBucket, type MatchDurationBucket } from "./analyticsEvents
 
 const CONSENT_KEY = "peluutin-analytics-consent-v1";
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com";
+const POSTHOG_HOST = "/rinki";
 
 export type AnalyticsConsent = "granted" | "denied";
 
@@ -25,6 +25,7 @@ const getClient = () => {
   clientPromise = import("posthog-js").then(({ default: posthog }) => {
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
+      ui_host: "https://eu.posthog.com",
       autocapture: false,
       capture_exceptions: false,
       capture_pageleave: false,

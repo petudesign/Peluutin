@@ -39,6 +39,9 @@ käyttöanalytiikka ovat eri käsitteitä:
 - Nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä.
 - PostHog ladataan vasta käyttäjän suostumuksen jälkeen, jotta se ei kasvata
   ydinnäkymän alkulatausta turhaan.
+- Tapahtumat kulkevat Vercelin first-party `/rinki`-proxyn kautta PostHogin
+  EU-ingest-palveluun. Suoraa ulkoista yhteyttä ei sallita Content Security
+  Policyssa.
 - Sallittu tapahtumaluettelo dokumentoidaan `data-inventory.md`-tiedostossa.
 
 ## Seuraavat tärkeät vaiheet
