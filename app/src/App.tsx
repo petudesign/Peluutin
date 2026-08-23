@@ -16,6 +16,7 @@ import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { changePlayerGoal } from "./features/match/matchLogic";
 import { scheduledStartError } from "./features/match/scheduledDate";
+import { analytics } from "./analytics";
 
 const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
@@ -250,6 +251,7 @@ export function App() {
     setSettingsTeamId(team.id);
     setTeamNameDraft(team.name);
     setNewFormationTeamSize(team.formations[0]?.teamSize || 8);
+    analytics.track("team_created", { source: "settings" });
   };
 
   const createFirstTeam = () => {
@@ -261,6 +263,7 @@ export function App() {
     activateTeam(team);
     setSettingsTeamId(team.id);
     setSettingsOpen(true);
+    analytics.track("team_created", { source: "onboarding" });
   };
 
   const deleteTeam = () => {
@@ -377,6 +380,7 @@ export function App() {
     if (activeScheduledMatchId) setScheduledMatches((current) => current.filter((item) => item.id !== activeScheduledMatchId));
     setActiveScheduledMatchId(undefined);
     setEndMatchOpen(false);
+    analytics.matchCompleted(true, seconds);
   };
 
   const discardMatch = () => {
@@ -386,6 +390,7 @@ export function App() {
     setEndMatchOpen(false);
     setDiscardMatchOpen(false);
     setHistoryNotice("Peli lopetettiin tallentamatta.");
+    analytics.matchCompleted(false, seconds);
   };
 
   const resetClock = () => {
@@ -443,6 +448,7 @@ export function App() {
     setActiveScheduledMatchId(undefined);
     setHistoryNotice("");
     setNewMatchOpen(false);
+    analytics.track("match_created", { source: "new" });
   };
 
   const scheduleMatch = (scheduledAt: string, formationId: string, startingLineup: PlayerId[]) => {
@@ -487,6 +493,7 @@ export function App() {
     setMatchCreated(true);
     setActiveScheduledMatchId(scheduled.id);
     setGamesOpen(false);
+    analytics.track("match_created", { source: "scheduled" });
   };
 
   const ownScoreIndex = venue === "home" ? 0 : 1;
@@ -531,11 +538,13 @@ export function App() {
   const openExercises = () => {
     window.history.replaceState(null, "", "#harjoitteet");
     setActiveFeature("exercises");
+    analytics.track("feature_opened", { module: "exercises" });
   };
 
   const closeExercises = () => {
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     setActiveFeature("matches");
+    analytics.track("feature_opened", { module: "matches" });
   };
 
   if (!homeTeam) {

@@ -44,6 +44,13 @@ yhdistettynä.
 Peluuttimen käyttöanalytiikkaan ei tarkoituksellisesti lähetetä pelaajien,
 joukkueiden tai vastustajien nimiä eikä lomakkeisiin kirjoitettua sisältöä.
 
+Käyttäjän erillisellä suostumuksella Peluutin lähettää PostHog EU Cloudiin
+ennalta määritettyjä tapahtumia sovelluksen ja sen ydintoimintojen käytöstä.
+Automaattinen klikkausten keruu, istuntotallenteet, virheiden automaattikeruu
+ja henkilöprofiilit on poistettu käytöstä. Ottelun tarkkaa kestoa ei lähetetä,
+vaan ainoastaan karkea kestoluokka. Suostumuksen voi antaa, evätä tai muuttaa
+Peluuttimen asetuksissa.
+
 Käsittelyn tarkoitus on ymmärtää Peluuttimen liikennettä, laitejakaumaa ja
 teknistä käyttöä sekä parantaa palvelun käytettävyyttä.
 
@@ -51,7 +58,9 @@ Käsittelyn oikeusperuste: **[arvioitava ja täydennettävä ennen julkaisua]**.
 
 ## 4. Tietojen vastaanottajat ja sijainti
 
-Vercel toimii Peluuttimen teknisenä hosting- ja analytiikkapalveluna. Vercelin
+Vercel toimii Peluuttimen teknisenä hosting- ja analytiikkapalveluna. PostHog
+toimii suostumukseen perustuvan käyttöanalytiikan käsittelijänä EU Cloud
+-ympäristössä. Vercelin
 ajantasaiset tiedot henkilötietojen käsittelystä, alihankkijoista ja
 kansainvälisistä tiedonsiirroista löytyvät Vercelin omista tietosuoja- ja
 käsittelyehdoista.
@@ -67,6 +76,8 @@ tavalla.
 Vercel Web Analyticsin tietojen saatavuus ja säilytys perustuvat Peluuttimen
 käytössä olevan Vercel-paketin ajantasaisiin ehtoihin. Tätä luonnosta
 päivitettäessä Hobby-paketin taattu raportointi-ikkuna on yksi kuukausi.
+
+PostHog-tapahtumien säilytysaika: **[täydennä projektissa määritetty aika]**.
 
 ## 6. Oikeudet ja yhteydenotot
 

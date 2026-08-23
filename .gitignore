@@ -1,5 +1,8 @@
 app/node_modules/
 app/dist/
+app/.env
+app/.env.*
+!app/.env.example
 app/outputs/
 app/.tmp-spreadsheet/
 app/.openai/

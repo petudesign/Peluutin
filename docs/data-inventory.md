@@ -80,13 +80,28 @@ käyttöönottoa.
 | Säilytys | Vercelin käytössä olevan paketin raportointi- ja säilytysehtojen mukainen. Hobby-paketin taattu raportointi-ikkuna on tätä asiakirjaa päivitettäessä yksi kuukausi; palveluntarjoajan ehdot tarkistetaan säännöllisesti. |
 | Rajaus | Ei pelaajien, joukkueiden tai vastustajien nimiä eikä lomakekenttien sisältöä. |
 
-## Suunniteltu käyttöanalytiikka — ei vielä käytössä
+## PostHog-käyttöanalytiikka
 
-| Tietoryhmä | Suunniteltu tarkoitus | Sallittu sisältö | Kielletty sisältö | Avoin päätös |
-| --- | --- | --- | --- | --- |
-| Käyttöpolun tapahtumat | Löytää ensikäytön keskeytyskohdat. | Ennalta nimetty tapahtuma, osio, laji, laiteryhmä ja demo/oikea käyttö. | Nimet, vapaa teksti, kokoonpanon sisältö ja tarkka otteludata. | Palveluntarjoaja, käsittelyperuste ja säilytysaika. |
-| Virhetapahtumat | Tunnistaa epäselvät validoinnit ja tekniset ongelmat. | Näkymä, kentän tekninen tunniste ja ennalta määritetty virheluokka. | Hylätty kenttäarvo, koko lomake tai sovelluksen tilannevedos. | Virheluokkien lista ja vähimmäismäärä ennen raportointia. |
-| Anonyymi asennustunniste | Arvioida paluuta samalla selaimella. | Satunnainen tunniste, ensimmäisen käytön ajankohta ja aktivoitumisen tila. | Sähköposti, nimi, IP-osoite tai laitteiden välinen yhdistely. | Tarpeellisuus, käsittelyperuste, suostumusratkaisu ja vanheneminen. |
+| Kohta | Kuvaus |
+| --- | --- |
+| Tiedot | Ennalta nimetyt tapahtumat sovelluksen avaamisesta, osion avaamisesta, joukkueen ja ottelun luomisesta sekä ottelun päättämisestä. Ominaisuudet on rajattu lajiin, osioon, tapahtuman lähteeseen, tallennusvalintaan ja karkeaan kestoluokkaan. PostHog lisää tapahtumiin teknisiä selain- ja laitetietoja. |
+| Tarkoitus | Löytää ensikäytön keskeytyskohdat ja ymmärtää ydintoimintojen käyttöä. |
+| Sijainti | PostHog EU Cloud, kun `VITE_POSTHOG_KEY` on asetettu tuotantoympäristöön. |
+| Pääsy | Peluuttimen PostHog-projektiin oikeutettu ylläpitäjä. |
+| Käynnistyminen | Vain käyttäjän nimenomaisen valinnan jälkeen. Valinnan voi muuttaa Peluuttimen asetuksissa. |
+| Rajaus | Automaattinen klikkausten keruu, session replay, poikkeusten automaattikeruu ja henkilöprofiilit ovat pois käytöstä. Pelaajien, joukkueiden ja vastustajien nimiä, vapaita tekstikenttiä, kokoonpanoja tai tarkkoja peliaikoja ei lähetetä. |
+| Säilytys | **[Määritä PostHog-projektin säilytysaika ennen tuotantokäyttöä.]** |
+
+### Sallittu tapahtumaluettelo, skeemaversio 1
+
+| Tapahtuma | Sallitut omat ominaisuudet |
+| --- | --- |
+| `application_opened` | `module`, `sport`, `schema_version` |
+| `analytics_consent_updated` | `choice`, `sport`, `schema_version` |
+| `feature_opened` | `module`, `sport`, `schema_version` |
+| `team_created` | `source`, `sport`, `schema_version` |
+| `match_created` | `source`, `sport`, `schema_version` |
+| `match_completed` | `saved`, `duration_bucket`, `sport`, `schema_version` |
 
 ## Tuleva pilvitallennus — ei vielä käytössä
 
@@ -104,16 +119,16 @@ palvelimelle ratkaistaan vähintään:
 - palveluntarjoajat, käsittelysopimukset ja tietojen sijainti;
 - tietoturvaloukkausten havaitseminen ja toimintamalli.
 
-## Avoimet päätökset ennen käyttöanalytiikkaa
+## Avoimet päätökset ennen PostHogin tuotantokäyttöä
 
-1. Valitaan analytiikkapalvelu ja EU-alue.
-2. Päätetään käsittelyperuste ja mahdollinen suostumusratkaisu.
-3. Määritetään tapahtumien täsmällinen sallittu skeema.
-4. Määritetään säilytys- ja poistokäytäntö.
-5. Päivitetään käyttäjälle näkyvä tietosuojaseloste ennen käyttöönottoa.
-6. Testataan, ettei verkkoon lähde nimiä tai muuta kiellettyä sisältöä.
+1. Määritetään ja dokumentoidaan PostHog-projektin säilytys- ja poistokäytäntö.
+2. Täydennetään rekisterinpitäjän tiedot ja julkaistaan tietosuojaseloste.
+3. Tarkistetaan PostHogin käsittelyehdot ja alihankkijat.
+4. Testataan selaimen verkkotyökaluilla, ettei verkkoon lähde nimiä tai muuta kiellettyä sisältöä.
 
 ## Muutosloki
 
 - 23.8.2026: Ensimmäinen kartoitus nykyisestä paikallistallennuksesta,
   Vercel Web Analyticsista ja suunnitellun käyttöanalytiikan rajoista.
+- 23.8.2026: Lisätty suostumukseen perustuvan PostHog EU Cloud -integraation
+  tapahtumaluettelo ja tekniset suojaukset.
