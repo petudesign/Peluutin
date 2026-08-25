@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import { Check, Pencil, Settings, Trash2 } from "lucide-react";
 import { validateFormation } from "../../formation";
 import { FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, Player, PlayerId, Team, TeamSize } from "../../types";
@@ -36,6 +36,7 @@ interface SettingsDialogProps {
 
 export function SettingsDialog(props: SettingsDialogProps) {
   const [formationError, setFormationError] = useState("");
+  const [isEditingTeamName, setIsEditingTeamName] = useState(false);
   const {
     teams, teamId, team, roster, formations, teamNameDraft, newTeamName, newPlayerName,
     newFormationName, newFormationTeamSize, onClose, onOpenAppSettings, onActivateTeam,
@@ -59,26 +60,81 @@ export function SettingsDialog(props: SettingsDialogProps) {
     setFormationError("");
     onAddFormation();
   };
+  const saveTeamName = () => {
+    if (!teamNameDraft.trim()) return;
+    if (teamNameDraft.trim() !== team.name) onSaveTeamName();
+    setIsEditingTeamName(false);
+  };
+  const finishSettings = () => {
+    if (isEditingTeamName && teamNameDraft.trim() && teamNameDraft.trim() !== team.name) onSaveTeamName();
+    onClose();
+  };
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && finishSettings()}>
       <section className="settings-modal team-management-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div className="settings-header">
-              <div><span className="eyebrow">PELAAJAT JA KOKOONPANOT</span><h2 id="settings-title">Joukkueet</h2></div>
+              <div><span className="eyebrow">PELAAJAT JA KOKOONPANOT</span><h2 id="settings-title">Joukkueet</h2><p className="autosave-note">Muutokset tallentuvat automaattisesti.</p></div>
               <div className="settings-header-actions">
                 <button className="mobile-team-settings" aria-label="Asetukset" onClick={onOpenAppSettings}><Settings size={18} aria-hidden="true"/></button>
-                <button className="close-button" onClick={onClose}>Sulje</button>
+                <button className="close-button" onClick={finishSettings}>Valmis</button>
               </div>
         </div>
         <div className="settings-layout">
           <aside className="team-settings">
             <h3>Joukkueet</h3>
             <div className="team-list">
-              {teams.map((item) => (
-                <button key={item.id} className={item.id === teamId ? "active" : ""} onClick={() => onActivateTeam(item)}>
-                  <strong>{item.name}</strong><span>{item.players.length} pelaajaa</span>
-                </button>
-              ))}
+              {teams.map((item) => {
+                const isActive = item.id === teamId;
+                return (
+                  <div key={item.id} className={`team-list-item${isActive ? " active" : ""}`}>
+                    {isActive && isEditingTeamName ? (
+                      <input
+                        className="team-name-input"
+                        maxLength={NAME_MAX_LENGTH}
+                        value={teamNameDraft}
+                        onChange={(event) => onTeamNameDraftChange(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") saveTeamName();
+                          if (event.key === "Escape") {
+                            onTeamNameDraftChange(team.name);
+                            setIsEditingTeamName(false);
+                          }
+                        }}
+                        aria-label="Joukkueen nimi"
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        className="team-select-button"
+                        onClick={() => {
+                          setIsEditingTeamName(false);
+                          onActivateTeam(item);
+                        }}
+                      >
+                        <strong>{item.name}</strong>
+                        <span>{item.players.length} pelaajaa</span>
+                      </button>
+                    )}
+                    {isActive && (
+                      <div className="team-card-actions">
+                        <button
+                          className="team-action-button"
+                          onClick={() => isEditingTeamName ? saveTeamName() : setIsEditingTeamName(true)}
+                          disabled={isEditingTeamName && !teamNameDraft.trim()}
+                          aria-label={isEditingTeamName ? "Tallenna joukkueen nimi" : `Muokkaa joukkueen ${team.name} nimeä`}
+                          title={isEditingTeamName ? "Tallenna nimi" : "Muokkaa nimeä"}
+                        >
+                          {isEditingTeamName ? <Check size={17} aria-hidden="true" /> : <Pencil size={16} aria-hidden="true" />}
+                        </button>
+                        <button className="delete-icon-button team-delete-button" onClick={onRequestDeleteTeam} aria-label={`Poista ${team.name}`} title={`Poista ${team.name}`}>
+                          <Trash2 size={17} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <div className="add-row">
               <input maxLength={NAME_MAX_LENGTH} value={newTeamName} onChange={(event) => onNewTeamNameChange(event.target.value)} placeholder="Esim. Testijoukkue FC" />
@@ -86,12 +142,6 @@ export function SettingsDialog(props: SettingsDialogProps) {
             </div>
           </aside>
           <div className="player-settings">
-            <h3>Valittu joukkue</h3>
-            <div className="team-name-row">
-              <input maxLength={NAME_MAX_LENGTH} value={teamNameDraft} onChange={(event) => onTeamNameDraftChange(event.target.value)} aria-label="Joukkueen nimi" />
-              {teamNameDraft.trim() !== team.name && <button className="button-primary" onClick={onSaveTeamName}>Tallenna nimi</button>}
-              <button className="danger destructive-filled" onClick={onRequestDeleteTeam}>Poista joukkue</button>
-            </div>
             <div className="player-editor-list">
               {roster.map((player) => (
                 <div className="player-editor" key={player.id}>
@@ -99,7 +149,9 @@ export function SettingsDialog(props: SettingsDialogProps) {
                     onChange={(event) => onUpdatePlayerNumber(player.id, Number(event.target.value) || 0)} />
                   <input maxLength={NAME_MAX_LENGTH} aria-label={`${player.name} nimi`} value={player.name}
                     onChange={(event) => onUpdatePlayerName(player.id, event.target.value)} />
-                  <button className="danger destructive-filled" onClick={() => onRemovePlayer(player.id)}>Poista</button>
+                  <button className="delete-icon-button" onClick={() => onRemovePlayer(player.id)} aria-label={`Poista ${player.name}`} title={`Poista ${player.name}`}>
+                    <Trash2 size={17} aria-hidden="true" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -119,7 +171,9 @@ export function SettingsDialog(props: SettingsDialogProps) {
                 {visibleFormations.map((item) => (
                   <div key={item.id}>
                     <strong>{item.name}</strong>
-                    <button className="danger" disabled={formations.length === 1} onClick={() => onRemoveFormation(item.id)}>Poista</button>
+                    <button className="delete-icon-button formation-delete-button" disabled={formations.length === 1} onClick={() => onRemoveFormation(item.id)} aria-label={`Poista muodostelma ${item.name}`} title={`Poista muodostelma ${item.name}`}>
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
                   </div>
                 ))}
               </div>

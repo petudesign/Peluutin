@@ -6,6 +6,7 @@ import type { Formation, MatchRecord, PlayerId, ScheduledMatch, Score, SelectedP
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
 import { Onboarding } from "./components/Onboarding";
+import { PlayerOnboarding } from "./components/PlayerOnboarding";
 import { PregameView } from "./components/PregameView";
 import { MatchWorkspace } from "./features/match/MatchWorkspace";
 import { NewMatchDialog } from "./features/match/NewMatchDialog";
@@ -47,6 +48,7 @@ export function App() {
   const [teams, setTeams] = useState(initialTeams);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
   const [onboardingTeamName, setOnboardingTeamName] = useState("");
+  const [onboardingPlayerTeamId, setOnboardingPlayerTeamId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [appSettingsReturnToTeams, setAppSettingsReturnToTeams] = useState(false);
@@ -85,6 +87,7 @@ export function App() {
 
   const homeTeam = teams.find((team) => team.id === teamId) || teams[0] || null;
   const settingsTeam = teams.find((team) => team.id === settingsTeamId) || homeTeam;
+  const onboardingPlayerTeam = teams.find((team) => team.id === onboardingPlayerTeamId) || null;
   const roster = homeTeam?.players || [];
   const settingsRoster = settingsTeam?.players || [];
   const byId = useMemo(() => Object.fromEntries(roster.map((p) => [p.id, p])), [roster]);
@@ -262,7 +265,7 @@ export function App() {
     setOnboardingTeamName("");
     activateTeam(team);
     setSettingsTeamId(team.id);
-    setSettingsOpen(true);
+    setOnboardingPlayerTeamId(team.id);
     analytics.track("team_created", { source: "onboarding" });
   };
 
@@ -549,6 +552,23 @@ export function App() {
 
   if (!homeTeam) {
     return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} />;
+  }
+
+  if (onboardingPlayerTeam) {
+    return (
+      <PlayerOnboarding
+        teamName={onboardingPlayerTeam.name}
+        players={onboardingPlayerTeam.players}
+        playerName={newPlayerName}
+        onPlayerNameChange={setNewPlayerName}
+        onAddPlayer={addPlayer}
+        onRemovePlayer={removePlayer}
+        onContinue={() => {
+          setNewPlayerName("");
+          setOnboardingPlayerTeamId(null);
+        }}
+      />
+    );
   }
 
   if (activeFeature === "exercises") {

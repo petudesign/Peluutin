@@ -18,7 +18,7 @@ export function Onboarding({ teamName, onTeamNameChange, onCreateTeam }: Onboard
         <img className="onboarding-logo" src="/assets/peluutin-logo.svg" alt="Peluutin" />
         <span className="eyebrow">TERVETULOA</span>
         <h1>Aloitetaan joukkueesta</h1>
-        <p>Luo ensimmäinen joukkue. Seuraavaksi pääset lisäämään pelaajat ja valitsemaan muodostelmat.</p>
+        <p>Luo ensimmäinen joukkue. Seuraavaksi lisäät joukkueen pelaajat.</p>
         <label>
           <span>Joukkueen nimi</span>
           <input

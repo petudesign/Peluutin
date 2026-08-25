@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, Player, PlayerId, ScheduledMatch, Team, TeamSize, Venue } from "../../types";
-import { formatScheduledDate, parseScheduledDate, scheduledStartError } from "./scheduledDate";
+import { formatScheduledDate, parseScheduledDate, scheduledDateFromInputValue, scheduledDateToInputValue, scheduledStartError } from "./scheduledDate";
 
 const defaultScheduledAt = () => {
   const date = new Date(Date.now() + 60 * 60 * 1000);
@@ -121,7 +121,7 @@ export function NewMatchDialog({
           {step === "details" && <button className="close-button" onClick={onClose}>Sulje</button>}
         </div>
         {step === "details" ? (
-          <>
+          <div className="new-match-details">
             <label>
               <span>Oma joukkue</span>
               <select
@@ -170,12 +170,12 @@ export function NewMatchDialog({
             <fieldset className="schedule-section">
               <legend>Ajankohta tulevaa peliä varten</legend>
               <div className="schedule-fields">
-                <label><span>Päivä</span><input inputMode="numeric" autoComplete="off" placeholder="pp/kk/vvvv" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value.slice(0, 10))} /></label>
-                <label><span>Aika</span><input inputMode="numeric" autoComplete="off" placeholder="16:00" value={scheduledTime} onChange={(event) => setScheduledTime(event.target.value.slice(0, 5))} /></label>
+                <label><span>Päivä</span><input type="date" value={scheduledDateToInputValue(scheduledDate)} onChange={(event) => setScheduledDate(scheduledDateFromInputValue(event.target.value))} /></label>
+                <label><span>Aika</span><input type="time" value={scheduledTime} onChange={(event) => setScheduledTime(event.target.value)} /></label>
               </div>
               {scheduleError && <small className="schedule-hint form-warning">{scheduleError}</small>}
             </fieldset>
-            <fieldset>
+            <fieldset className="attendance-section">
               <div className="attendance-heading">
                 <legend>Aktiiviset pelaajat</legend>
                 <span>{activePlayerIds.length}/{roster.length} mukana</span>
@@ -203,7 +203,7 @@ export function NewMatchDialog({
             >
               {needsMorePlayers ? "Lisää pelaajia" : "Muokkaa aloituskokoonpanoa"}
             </button>
-          </>
+          </div>
         ) : (
           <>
             <p className="lineup-intro">Pelaajat on täytetty automaattisesti. Vaihda vain ne paikat, joita haluat muuttaa.</p>

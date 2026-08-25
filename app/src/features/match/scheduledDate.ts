@@ -4,6 +4,16 @@ export function formatScheduledDate(date: Date) {
     .join("/");
 }
 
+export function scheduledDateToInputValue(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+}
+
+export function scheduledDateFromInputValue(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+}
+
 export function formatScheduledDateTime(value: string) {
   const date = new Date(value);
   return `${formatScheduledDate(date)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
