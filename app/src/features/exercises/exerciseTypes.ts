@@ -1,7 +1,15 @@
 export type ExerciseView = "2d" | "3d";
-export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "dummy" | "pass" | "run" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
+export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "dummy" | "goal-small" | "goal-youth" | "goal-full" | "pass" | "run" | "dribble" | "shot" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
 export type ExercisePlayerRole = "goalkeeper" | "defender" | "midfielder" | "attacker";
 export type ExerciseGoalSize = "small" | "youth" | "full";
+export type ExercisePitchPreset = "training" | "full";
+export type ExercisePitchOrientation = "landscape" | "portrait";
+export type ExercisePitchStyle = "dark" | "grass";
+
+export const EXERCISE_PITCH_DIMENSIONS: Record<ExercisePitchPreset, { length: number; width: number; groundLength: number; groundWidth: number }> = {
+  training: { length: 11.5, width: 7.5, groundLength: 13, groundWidth: 8.8 },
+  full: { length: 16, width: 10.4, groundLength: 17.2, groundWidth: 11.4 },
+};
 
 export const EXERCISE_ROLE_OPTIONS: Array<{ value: ExercisePlayerRole; label: string; shortLabel: string; color: string }> = [
   { value: "goalkeeper", label: "Maalivahti", shortLabel: "MV", color: "#e1a629" },
@@ -9,24 +17,25 @@ export const EXERCISE_ROLE_OPTIONS: Array<{ value: ExercisePlayerRole; label: st
   { value: "midfielder", label: "Keskikenttä", shortLabel: "K", color: "#27a786" },
   { value: "attacker", label: "Hyökkääjä", shortLabel: "H", color: "#df6a50" },
 ];
-export const EXERCISE_LIGHT_CONTRAST_OUTLINE = "#0b1d22";
 
 export interface ExerciseMarker {
   id: string;
-  kind: "player" | "ball" | "cone" | "dummy";
+  kind: "player" | "ball" | "cone" | "dummy" | "goal";
   team?: "blue" | "red";
   role?: ExercisePlayerRole | "field";
+  color?: string;
   name: string;
   number?: number;
   x: number;
   z: number;
   /** Facing direction for directional equipment, in degrees. */
   rotation?: number;
+  goalSize?: ExerciseGoalSize;
 }
 
 export interface ExercisePath {
   id: string;
-  kind: "pass" | "run";
+  kind: "pass" | "run" | "dribble" | "shot";
   fromId: string;
   toId?: string;
   toPoint?: { x: number; z: number };
@@ -59,25 +68,54 @@ export interface ExerciseDraft {
   paths: ExercisePath[];
   annotations: ExerciseAnnotation[];
   goalSize: ExerciseGoalSize;
+  pitchPreset: ExercisePitchPreset;
+  pitchOrientation: ExercisePitchOrientation;
+  pitchStyle: ExercisePitchStyle;
   updatedAt: string;
+}
+
+export function resizeExerciseDraftContent(draft: ExerciseDraft, nextPreset: ExercisePitchPreset): ExerciseDraft {
+  if (draft.pitchPreset === nextPreset) return draft;
+  const current = EXERCISE_PITCH_DIMENSIONS[draft.pitchPreset], next = EXERCISE_PITCH_DIMENSIONS[nextPreset];
+  const scalePoint = ({ x, z }: { x: number; z: number }) => ({ x: x * next.length / current.length, z: z * next.width / current.width });
+  return {
+    ...draft,
+    pitchPreset: nextPreset,
+    markers: draft.markers.map(marker => ({ ...marker, ...scalePoint(marker) })),
+    paths: draft.paths.map(path => path.toPoint ? { ...path, toPoint: scalePoint(path.toPoint) } : path),
+    annotations: draft.annotations.map(annotation => ({ ...annotation, points: annotation.points.map(scalePoint) })),
+  };
 }
 
 export function normalizeExercisePlayerRole(role: ExerciseMarker["role"]): ExercisePlayerRole {
   return EXERCISE_ROLE_OPTIONS.some(option => option.value === role) ? role as ExercisePlayerRole : "midfielder";
 }
 
-export function getExerciseMarkerColor(marker: ExerciseMarker, theme: "light" | "dark" = "dark") {
+export function getExerciseMarkerColor(marker: ExerciseMarker, _theme: "light" | "dark" = "dark") {
+  if (marker.color) return marker.color;
   if (marker.kind === "ball") return "#f3aa2b";
   if (marker.kind === "cone") return "#f28a2e";
   if (marker.kind === "dummy") return "#bfd632";
-  if (marker.team === "red") return theme === "light" ? "#545f65" : "#747f85";
-  if (theme === "light") return ({ goalkeeper: "#a66800", defender: "#075fba", midfielder: "#087856", attacker: "#b44731" } as const)[normalizeExercisePlayerRole(marker.role)];
-  return EXERCISE_ROLE_OPTIONS.find(option => option.value === normalizeExercisePlayerRole(marker.role))!.color;
+  if (marker.kind === "goal") return "#e4ebed";
+  if (marker.team === "red") return "#545f65";
+  return ({ goalkeeper: "#a66800", defender: "#075fba", midfielder: "#087856", attacker: "#b44731" } as const)[normalizeExercisePlayerRole(marker.role)];
 }
 
-export function getExercisePathColor(kind: ExercisePath["kind"], theme: "light" | "dark") {
-  if (kind === "pass") return theme === "light" ? "#8a4e00" : "#ffb21c";
-  return theme === "light" ? "#004f9e" : "#75d7ff";
+export function getExercisePathColor(kind: ExercisePath["kind"], _theme: "light" | "dark") {
+  if (kind === "pass") return "#ffb21c";
+  if (kind === "run") return "#75d7ff";
+  if (kind === "dribble") return "#65e2b1";
+  return "#ff766c";
+}
+
+export function isExerciseBallPath(kind: ExercisePath["kind"]) {
+  return kind === "pass" || kind === "dribble" || kind === "shot";
+}
+
+export function canTargetExercisePath(kind: ExercisePath["kind"], from: ExerciseMarker, to: ExerciseMarker) {
+  if (kind === "pass") return canPassBetween(from, to);
+  if (kind === "shot") return (from.kind === "player" || from.kind === "ball") && to.kind === "goal";
+  return (from.kind === "player" || from.kind === "ball") && (to.kind === "player" || to.kind === "ball");
 }
 
 export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
@@ -115,15 +153,15 @@ export function isExercisePathValid(path: ExercisePath, markers: ExerciseMarker[
   if (!from) return false;
   if (path.toId) {
     const to = markers.find((marker) => marker.id === path.toId);
-    return Boolean(to && (path.kind === "run" || canPassBetween(from, to)));
+    return Boolean(to && canTargetExercisePath(path.kind, from, to));
   }
-  return path.kind === "run" && Number.isFinite(path.toPoint?.x) && Number.isFinite(path.toPoint?.z);
+  return path.kind !== "pass" && Number.isFinite(path.toPoint?.x) && Number.isFinite(path.toPoint?.z);
 }
 
 const FIELD_METERS_PER_UNIT = 8.75;
 export const EXERCISE_MIN_DURATION_MS = 300;
 export const EXERCISE_MAX_DURATION_MS = 5000;
-export const EXERCISE_NATURAL_SPEEDS = { passKmh: 54, runKmh: 18 } as const;
+export const EXERCISE_NATURAL_SPEEDS = { passKmh: 54, runKmh: 18, dribbleKmh: 12, shotKmh: 75 } as const;
 
 function pathPhase(path: ExercisePath, index: number) {
   return Number.isInteger(path.phase) && (path.phase ?? -1) >= 0 ? path.phase! : index;
@@ -134,7 +172,7 @@ export function getExercisePathNaturalDurationMs(path: ExercisePath, markers: Ex
   const to = path.toId ? markers.find(marker => marker.id === path.toId) : path.toPoint;
   if (!from || !to) return 0;
   const distanceMeters = Math.hypot(to.x - from.x, to.z - from.z) * FIELD_METERS_PER_UNIT * (1 + Math.abs(path.curve ?? 0) * .18);
-  const metersPerSecond = (path.kind === "pass" ? EXERCISE_NATURAL_SPEEDS.passKmh : EXERCISE_NATURAL_SPEEDS.runKmh) / 3.6;
+  const metersPerSecond = ({ pass: EXERCISE_NATURAL_SPEEDS.passKmh, run: EXERCISE_NATURAL_SPEEDS.runKmh, dribble: EXERCISE_NATURAL_SPEEDS.dribbleKmh, shot: EXERCISE_NATURAL_SPEEDS.shotKmh } as const)[path.kind] / 3.6;
   return Math.max(EXERCISE_MIN_DURATION_MS, distanceMeters / metersPerSecond * 1000);
 }
 
@@ -179,8 +217,8 @@ export function setExercisePathStartMs(paths: ExercisePath[], pathId: string, re
   if (!selected) return normalized;
   const duration = getExercisePathDurationMs(selected, markers);
   let startMs = Math.max(0, Math.round(requestedStartMs / 50) * 50);
-  if (selected.kind === "pass") {
-    const others = normalized.filter(path => path.id !== pathId && path.kind === "pass")
+  if (isExerciseBallPath(selected.kind)) {
+    const others = normalized.filter(path => path.id !== pathId && isExerciseBallPath(path.kind))
       .map(path => ({ start: path.startMs ?? 0, duration: getExercisePathDurationMs(path, markers) }))
       .sort((a, b) => a.start - b.start);
     for (let attempt = 0; attempt <= others.length; attempt += 1) {
@@ -198,8 +236,8 @@ export function setExercisePathDurationMs(paths: ExercisePath[], pathId: string,
   const normalized = normalizeExerciseTimeline(paths, markers), selected = normalized.find(path => path.id === pathId);
   if (!selected) return normalized;
   let durationMs = Math.min(EXERCISE_MAX_DURATION_MS, Math.max(EXERCISE_MIN_DURATION_MS, Math.round(requestedDurationMs / 50) * 50));
-  if (selected.kind === "pass") {
-    const nextPass = normalized.filter(path => path.id !== pathId && path.kind === "pass" && (path.startMs ?? 0) > (selected.startMs ?? 0))
+  if (isExerciseBallPath(selected.kind)) {
+    const nextPass = normalized.filter(path => path.id !== pathId && isExerciseBallPath(path.kind) && (path.startMs ?? 0) > (selected.startMs ?? 0))
       .sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0))[0];
     if (nextPass) durationMs = Math.min(durationMs, Math.max(EXERCISE_MIN_DURATION_MS, (nextPass.startMs ?? 0) - (selected.startMs ?? 0)));
   }
@@ -209,8 +247,8 @@ export function setExercisePathDurationMs(paths: ExercisePath[], pathId: string,
 export function resetExercisePathDuration(paths: ExercisePath[], pathId: string, markers: ExerciseMarker[]) {
   let normalized = normalizeExerciseTimeline(paths, markers).map(path => path.id === pathId ? { ...path, durationMs: undefined } : path);
   const selected = normalized.find(path => path.id === pathId);
-  if (selected?.kind !== "pass") return normalized;
-  const passes = normalized.filter(path => path.kind === "pass").sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
+  if (!selected || !isExerciseBallPath(selected.kind)) return normalized;
+  const passes = normalized.filter(path => isExerciseBallPath(path.kind)).sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
   const selectedIndex = passes.findIndex(path => path.id === pathId);
   for (let index = Math.max(1, selectedIndex + 1); index < passes.length; index += 1) {
     const previous = passes[index - 1], current = passes[index];
@@ -232,8 +270,11 @@ export function getExerciseTimelineProgress(elapsedMs: number, speed: number, en
   return getExerciseTimelineProgressAt(Math.max(0, elapsedMs) * Math.max(.1, speed), entry, totalMs);
 }
 
-export function getExercise2dFitZoom(width: number, height: number) {
+export function getExercise2dFitZoom(width: number, height: number, preset: ExercisePitchPreset = "training", orientation: ExercisePitchOrientation = "landscape") {
+  const pitch = EXERCISE_PITCH_DIMENSIONS[preset];
+  const renderedWidth = orientation === "landscape" ? pitch.groundLength : pitch.groundWidth;
+  const renderedHeight = orientation === "landscape" ? pitch.groundWidth : pitch.groundLength;
   const usableWidth = Math.max(width - 180, 360);
   const usableHeight = Math.max(height - 160, 360);
-  return Math.min(usableWidth / 12.8, usableHeight / 8.8);
+  return Math.min(usableWidth / renderedWidth, usableHeight / renderedHeight);
 }

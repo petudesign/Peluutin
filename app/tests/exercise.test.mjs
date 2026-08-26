@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, createExerciseMarkerCopy, EXERCISE_LIGHT_CONTRAST_OUTLINE, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, keepSingleBall, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, keepSingleBall, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
@@ -31,27 +31,28 @@ test("limits each exercise team to eleven players", () => {
 });
 
 test("colors own players by position and keeps opponents neutral", () => {
-  const defenderColor = EXERCISE_ROLE_OPTIONS.find(option => option.value === "defender").color;
-  assert.equal(getExerciseMarkerColor({ ...player("blue"), role: "defender" }), defenderColor);
-  assert.equal(getExerciseMarkerColor({ ...player("red"), role: "attacker" }), "#747f85");
+  assert.equal(getExerciseMarkerColor({ ...player("blue"), role: "defender" }), "#075fba");
+  assert.equal(getExerciseMarkerColor({ ...player("red"), role: "attacker" }), "#545f65");
   assert.equal(normalizeExercisePlayerRole("field"), "midfielder");
+  assert.equal(getExerciseMarkerColor({ ...player("red"), color: "#f25f54" }), "#f25f54");
 });
 
-test("keeps light-theme colors recognizable with a contrasting pitch outline", () => {
-  const luminance = (hex) => {
-    const channels = hex.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16) / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
-    return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
-  };
-  const contrast = (first, second) => (Math.max(luminance(first), luminance(second)) + .05) / (Math.min(luminance(first), luminance(second)) + .05);
-  const pitchStripes = ["#347c2b", "#3f8a32"];
+test("keeps marker colors distinct and consistent between interface themes", () => {
   const colors = [
     ...EXERCISE_ROLE_OPTIONS.map(option => getExerciseMarkerColor({ ...player("blue"), role: option.value }, "light")),
     getExerciseMarkerColor(player("red"), "light"),
-    getExercisePathColor("pass", "light"),
-    getExercisePathColor("run", "light"),
   ];
   assert.equal(new Set(colors).size, colors.length);
-  pitchStripes.forEach(stripe => assert.ok(contrast(EXERCISE_LIGHT_CONTRAST_OUTLINE, stripe) >= 3, `${EXERCISE_LIGHT_CONTRAST_OUTLINE} against ${stripe}`));
+  EXERCISE_ROLE_OPTIONS.forEach(option => assert.equal(
+    getExerciseMarkerColor({ ...player("blue"), role: option.value }, "light"),
+    getExerciseMarkerColor({ ...player("blue"), role: option.value }, "dark"),
+  ));
+});
+
+test("keeps route colors consistent between interface themes", () => {
+  ["pass", "run", "dribble", "shot"].forEach(kind => {
+    assert.equal(getExercisePathColor(kind, "light"), getExercisePathColor(kind, "dark"));
+  });
 });
 
 test("formats the route count in Finnish", () => {
@@ -63,12 +64,29 @@ test("formats the route count in Finnish", () => {
 test("fits the 2D pitch between the editor controls", () => {
   assert.equal(getExercise2dFitZoom(1896, 930), 87.5);
   assert.ok(getExercise2dFitZoom(778, 844) < getExercise2dFitZoom(1896, 930));
+  assert.ok(getExercise2dFitZoom(1896, 930, "full") < getExercise2dFitZoom(1896, 930, "training"));
+  assert.ok(getExercise2dFitZoom(1896, 930, "full", "portrait") < getExercise2dFitZoom(1896, 930, "full", "landscape"));
+});
+
+test("scales exercise content with the pitch preset", () => {
+  const draft = { name: "", notes: "", markers: [{ ...player("blue"), x: 2, z: -1 }], paths: [{ id: "run", kind: "run", fromId: "blue", toPoint: { x: 4, z: 2 } }], annotations: [{ id: "line", kind: "line", color: "#fff", points: [{ x: -2, z: 1 }] }], goalSize: "youth", pitchPreset: "training", pitchOrientation: "landscape", updatedAt: "" };
+  const resized = resizeExerciseDraftContent(draft, "full");
+  assert.equal(resized.pitchPreset, "full");
+  assert.ok(resized.markers[0].x > draft.markers[0].x);
+  assert.ok(resized.markers[0].z < draft.markers[0].z);
+  assert.ok(resized.paths[0].toPoint.x > draft.paths[0].toPoint.x);
+  assert.ok(resized.annotations[0].points[0].x < draft.annotations[0].points[0].x);
 });
 
 test("accepts free run targets but keeps passes attached to markers", () => {
   const markers = [player("blue"), player("red")];
   assert.equal(isExercisePathValid({ id: "run", kind: "run", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
   assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), false);
+  assert.equal(isExercisePathValid({ id: "dribble", kind: "dribble", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
+  assert.equal(isExercisePathValid({ id: "shot", kind: "shot", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
+  const goal = { id: "goal", kind: "goal", name: "Maali", goalSize: "youth", x: 3, z: 0 };
+  assert.equal(canTargetExercisePath("shot", markers[0], goal), true);
+  assert.equal(canTargetExercisePath("run", markers[0], goal), false);
 });
 
 test("uses distance-based run durations", () => {
@@ -78,6 +96,8 @@ test("uses distance-based run durations", () => {
   assert.ok(getExercisePathDurationMs(longRun, markers) > getExercisePathDurationMs(shortRun, markers));
   assert.equal(EXERCISE_NATURAL_SPEEDS.runKmh, 18);
   assert.equal(EXERCISE_NATURAL_SPEEDS.passKmh, 54);
+  assert.equal(EXERCISE_NATURAL_SPEEDS.dribbleKmh, 12);
+  assert.equal(EXERCISE_NATURAL_SPEEDS.shotKmh, 75);
   assert.equal(getExercisePathDurationMs(shortRun, markers), 1750);
   assert.equal(getExercisePathDurationMs({ ...shortRun, durationMs: 900 }, markers), 900);
   assert.equal(getExercisePathNaturalDurationMs({ ...shortRun, durationMs: 900 }, markers), 1750);
