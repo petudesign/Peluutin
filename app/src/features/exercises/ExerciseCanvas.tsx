@@ -7,8 +7,8 @@ import { buildExerciseTimeline, EXERCISE_PITCH_DIMENSIONS, getExercise2dFitZoom,
 
 interface ExerciseCanvasProps {
   theme: "light" | "dark"; view: ExerciseView; tool: ExerciseTool; markers: ExerciseMarker[]; paths: ExercisePath[]; annotations: ExerciseAnnotation[]; goalSize: ExerciseGoalSize; pitchPreset: ExercisePitchPreset; pitchOrientation: ExercisePitchOrientation; pitchStyle: ExercisePitchStyle; showNames: boolean;
-  selectedId: string | null; selectedAnnotationId: string | null; selectedPathId: string | null; editingTextId: string | null; playbackPositionMs: number; showPlaybackFrame: boolean;
-  onSelect: (id: string | null) => void; onSelectAnnotation: (id: string) => void; onSelectPath: (id: string) => void;
+  selectedIds: string[]; selectedAnnotationId: string | null; selectedPathId: string | null; editingTextId: string | null; playbackPositionMs: number; showPlaybackFrame: boolean;
+  onSelect: (id: string | null, additive?: boolean) => void; onBoxSelect: (ids: string[], additive: boolean) => void; onSelectAnnotation: (id: string) => void; onSelectPath: (id: string) => void;
   onChangeText: (id: string, text: string) => void; onFinishTextEdit: (id: string) => void; onMove: (id: string, x: number, z: number) => void;
   onPitchPointer: (phase: "down" | "move" | "up", x: number, z: number) => void; onEraseAnnotation: (id: string) => void;
 }
@@ -64,7 +64,7 @@ function arc(cx: number, cz: number, radius: number, from: number, to: number, c
 
 const GOAL_DIMENSIONS: Record<ExerciseGoalSize, { width: number; height: number; depth: number }> = {
   small: { width: 1.15, height: .3, depth: .36 },
-  youth: { width: 1.65, height: .46, depth: .52 },
+  youth: { width: 1.4, height: .46, depth: .52 },
   full: { width: 2.05, height: .58, depth: .65 },
 };
 
@@ -90,8 +90,8 @@ function GoalNet({ x, back, width, height }: { x: number; back: number; width: n
   return <lineSegments geometry={geometry} material={material} />;
 }
 
-function Goal({ x, flip = false, size, width }: { x: number; flip?: boolean; size: ExerciseGoalSize; width?: number }) {
-  const base = GOAL_DIMENSIONS[size], dimensions = { ...base, width: width ?? base.width }, depth = flip ? dimensions.depth : -dimensions.depth, back = x + depth, middle = x + depth / 2, halfWidth = dimensions.width / 2;
+function Goal({ x, flip = false, size }: { x: number; flip?: boolean; size: ExerciseGoalSize }) {
+  const dimensions = GOAL_DIMENSIONS[size], depth = flip ? dimensions.depth : -dimensions.depth, back = x + depth, middle = x + depth / 2, halfWidth = dimensions.width / 2;
   return <group>
     {[x, back].flatMap((postX, row) => [-halfWidth, halfWidth].map(z => <mesh key={`${row}-${z}`} position={[postX, dimensions.height / 2, z]}><cylinderGeometry args={[.024, .024, dimensions.height, 12]} /><meshStandardMaterial color="#e4ebed" roughness={.45} /></mesh>))}
     {[x, back].map(postX => <mesh key={postX} position={[postX, dimensions.height, 0]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[.024, .024, dimensions.width, 12]} /><meshStandardMaterial color="#e4ebed" roughness={.45} /></mesh>)}
@@ -111,7 +111,7 @@ function Pitch({ goalSize, preset, style }: { goalSize: ExerciseGoalSize; preset
     <PitchLine points={[[-halfLength, -halfWidth], [halfLength, -halfWidth], [halfLength, halfWidth], [-halfLength, halfWidth], [-halfLength, -halfWidth]]} /><PitchLine points={[[0, -halfWidth], [0, halfWidth]]} /><PitchLine points={center} />
     {[1, -1].map(side => { const end = side * halfLength, penalty = side * (halfLength - 1.33 * scaleX), goal = side * (halfLength - .57 * scaleX), spot = side * (halfLength - 1.03 * scaleX), penaltyHalfWidth = 2.05 * scaleZ, goalHalfWidth = .9 * scaleZ; return <group key={side}><PitchLine points={[[end, -penaltyHalfWidth], [penalty, -penaltyHalfWidth], [penalty, penaltyHalfWidth], [end, penaltyHalfWidth]]} /><PitchLine points={[[end, -goalHalfWidth], [goal, -goalHalfWidth], [goal, goalHalfWidth], [end, goalHalfWidth]]} /><mesh position={[spot, .06, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.045, 18]} /><meshBasicMaterial color={LINE} /></mesh><PitchLine points={arc(spot, 0, .8 * scaleZ, side > 0 ? Math.PI - boxArcAngle : -boxArcAngle, side > 0 ? Math.PI + boxArcAngle : boxArcAngle)} /></group>; })}
     {([[-halfLength, -halfWidth, 0, Math.PI / 2], [halfLength, -halfWidth, Math.PI / 2, Math.PI], [-halfLength, halfWidth, -Math.PI / 2, 0], [halfLength, halfWidth, Math.PI, Math.PI * 1.5]] as Array<[number, number, number, number]>).map(([x, z, from, to], index) => <PitchLine key={index} points={arc(x, z, .18 * scaleZ, from, to, 10)} />)}
-    <mesh position={[0, .06, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.05, 18]} /><meshBasicMaterial color={LINE} /></mesh><Goal x={-halfLength - .04} size={goalSize} width={preset === "full" && goalSize === "full" ? 1.8 * scaleZ : undefined} /><Goal x={halfLength + .04} flip size={goalSize} width={preset === "full" && goalSize === "full" ? 1.8 * scaleZ : undefined} />
+    <mesh position={[0, .06, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.05, 18]} /><meshBasicMaterial color={LINE} /></mesh><Goal x={-halfLength - .04} size={goalSize} /><Goal x={halfLength + .04} flip size={goalSize} />
   </group>;
 }
 
@@ -144,7 +144,7 @@ function soccerBallTexture() {
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = THREE.RepeatWrapping; return texture;
 }
 
-function Marker({ marker, selected, theme, view, showName, onPointerDown }: { marker: ExerciseMarker; selected: boolean; theme: "light" | "dark"; view: ExerciseView; showName: boolean; onPointerDown: (id: string) => void }) {
+function Marker({ marker, selected, theme, view, showName, onPointerDown }: { marker: ExerciseMarker; selected: boolean; theme: "light" | "dark"; view: ExerciseView; showName: boolean; onPointerDown: (id: string, additive: boolean) => void }) {
   const texture = useMemo(() => textureFor(marker.kind === "ball" ? "Pallo" : marker.name, view === "2d" ? 35 : 28, theme), [marker, theme, view]); useEffect(() => () => texture.dispose(), [texture]);
   const color = getExerciseMarkerColor(marker, theme), ringColor = marker.team === "red" ? "#d6dde0" : "#f2f6f7";
   const isEquipment = marker.kind === "cone" || marker.kind === "dummy" || marker.kind === "goal", baseY = isEquipment ? .02 : .11;
@@ -152,7 +152,7 @@ function Marker({ marker, selected, theme, view, showName, onPointerDown }: { ma
   const selectionRadius = marker.kind === "player" ? [.26, .31] : marker.kind === "dummy" ? [.2, .25] : marker.kind === "goal" ? [goalRadius + .08, goalRadius + .14] : [.14, .19];
   const nameY = marker.kind === "dummy" && view === "3d" ? .82 : marker.kind === "player" ? .31 : .24;
   const nameZ = view === "2d" && marker.kind === "dummy" ? -.3 : view === "2d" && marker.kind !== "player" ? -.2 : 0;
-  return <group position={[marker.x, baseY, marker.z]} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; event.stopPropagation(); onPointerDown(marker.id); }}>
+  return <group position={[marker.x, baseY, marker.z]} onPointerDown={(event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); onPointerDown(marker.id, event.shiftKey); }}>
     {marker.kind === "ball" && <mesh castShadow={view === "3d"}><sphereGeometry args={[.1, 24, 24]} /><meshStandardMaterial color={color} emissive="#5b3700" emissiveIntensity={.25} /></mesh>}
     {marker.kind === "player" && <><mesh castShadow={view === "3d"}><cylinderGeometry args={[.19, .19, .12, 32]} /><meshStandardMaterial color={color} roughness={.4} emissive={selected ? color : "#000"} emissiveIntensity={selected ? .35 : 0} /></mesh><mesh position={[0, .065, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[.14, .18, 32]} /><meshBasicMaterial color={ringColor} /></mesh></>}
     {marker.kind === "cone" && <group><mesh position={[0, .085, 0]} castShadow={view === "3d"}><coneGeometry args={[.105, .17, 20]} /><meshStandardMaterial color={color} roughness={.55} emissive={selected ? "#7b3300" : "#000"} emissiveIntensity={selected ? .35 : 0} /></mesh><mesh position={[0, .015, 0]}><cylinderGeometry args={[.135, .135, .03, 20]} /><meshStandardMaterial color="#d96816" roughness={.65} /></mesh></group>}
@@ -163,6 +163,11 @@ function Marker({ marker, selected, theme, view, showName, onPointerDown }: { ma
 }
 
 type PathTarget = { x: number; z: number; kind: ExerciseMarker["kind"] | "point" };
+
+function SelectionBox({ start, end }: { start: { x: number; z: number }; end: { x: number; z: number } }) {
+  const left = Math.min(start.x, end.x), right = Math.max(start.x, end.x), top = Math.min(start.z, end.z), bottom = Math.max(start.z, end.z);
+  return <group><mesh position={[(left + right) / 2, .09, (top + bottom) / 2]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[right - left, bottom - top]} /><meshBasicMaterial color="#5da8ff" transparent opacity={.13} depthWrite={false} /></mesh><PitchLine y={.105} color="#75d7ff" points={[[left, top], [right, top], [right, bottom], [left, bottom], [left, top]]} /></group>;
+}
 
 function AnimatedPath({ path, from, to, theme, playbackPositionMs, showPlaybackFrame, timelineEntry, timelineTotalMs, selected, erase, onSelect }: { path: ExercisePath; from: ExerciseMarker; to: PathTarget; theme: "light" | "dark"; playbackPositionMs: number; showPlaybackFrame: boolean; timelineEntry: ExerciseTimelineEntry; timelineTotalMs: number; selected: boolean; erase: boolean; onSelect: (id: string) => void }) {
   const pulse = useRef<THREE.Group | null>(null), direction = useMemo(() => new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), [from.x, from.z, to.x, to.z]);
@@ -195,7 +200,10 @@ function Annotation({ item, erase, editing, selected, theme, onErase, onSelect }
   const first = item.points[0], last = item.points.at(-1); if (!first || !last) return null; let points = item.points.map(point => [point.x, point.z] as [number, number]);
   if (item.kind === "rectangle") points = [[first.x, first.z], [last.x, first.z], [last.x, last.z], [first.x, last.z], [first.x, first.z]];
   if (item.kind === "circle") { const radiusX = Math.abs(last.x - first.x), radiusZ = Math.abs(last.z - first.z); points = Array.from({ length: 41 }, (_, index) => { const angle = index / 40 * Math.PI * 2; return [first.x + Math.cos(angle) * radiusX, first.z + Math.sin(angle) * radiusZ]; }); }
-  return <group onPointerDown={click}><PitchLine points={points} color={selected ? "#fff" : item.color} y={.09} /></group>;
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) curve.add(new THREE.LineCurve3(new THREE.Vector3(points[index - 1][0], .09, points[index - 1][1]), new THREE.Vector3(points[index][0], .09, points[index][1])));
+  const radius = ({ 1: .012, 2: .026, 3: .05 } as const)[item.width ?? 2];
+  return <group onPointerDown={click}><mesh><tubeGeometry args={[curve, Math.max(1, points.length - 1), radius, 6, false]} /><meshBasicMaterial color={selected ? "#fff" : item.color} /></mesh></group>;
 }
 
 function TextEditorTracker({ item, inputRef, orientation }: { item: ExerciseAnnotation; inputRef: RefObject<HTMLInputElement | null>; orientation: ExercisePitchOrientation }) {
@@ -205,17 +213,33 @@ function TextEditorTracker({ item, inputRef, orientation }: { item: ExerciseAnno
 }
 
 function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInputElement | null>; resetSignal: number; onZoomChange: (percent: number) => void }) {
-  const dragging = useRef<string | null>(null), markerMap = useMemo(() => Object.fromEntries(props.markers.map(marker => [marker.id, marker])), [props.markers]), editingText = props.annotations.find(item => item.id === props.editingTextId);
+  const dragging = useRef<string | null>(null), [selectionBox, setSelectionBox] = useState<{ start: { x: number; z: number }; end: { x: number; z: number }; additive: boolean } | null>(null), markerMap = useMemo(() => Object.fromEntries(props.markers.map(marker => [marker.id, marker])), [props.markers]), editingText = props.annotations.find(item => item.id === props.editingTextId);
   const timeline = useMemo(() => buildExerciseTimeline(props.paths, props.markers), [props.markers, props.paths]);
   const timelineByPath = useMemo(() => new Map(timeline.entries.map(entry => [entry.pathId, entry])), [timeline.entries]);
   const dimensions = EXERCISE_PITCH_DIMENSIONS[props.pitchPreset], limitX = dimensions.length / 2 - .25, limitZ = dimensions.width / 2 - .25;
   const pitchPoint = (point: THREE.Vector3) => props.pitchOrientation === "portrait" ? { x: -point.z, z: point.x } : { x: point.x, z: point.z };
-  const pointer = (phase: "down" | "move" | "up", event: ThreeEvent<PointerEvent>) => { const point = pitchPoint(event.point); if (phase === "move" && dragging.current) props.onMove(dragging.current, THREE.MathUtils.clamp(point.x, -limitX, limitX), THREE.MathUtils.clamp(point.z, -limitZ, limitZ)); if (phase === "up") dragging.current = null; props.onPitchPointer(phase, point.x, point.z); };
+  const pointer = (phase: "down" | "move" | "up", event: ThreeEvent<PointerEvent>) => {
+    const point = pitchPoint(event.point), bounded = { x: THREE.MathUtils.clamp(point.x, -limitX, limitX), z: THREE.MathUtils.clamp(point.z, -limitZ, limitZ) };
+    if (phase === "move" && dragging.current) props.onMove(dragging.current, bounded.x, bounded.z);
+    if (props.tool === "select" && !dragging.current) {
+      if (phase === "down") { event.target.setPointerCapture(event.pointerId); if (!event.shiftKey) props.onSelect(null); setSelectionBox({ start: bounded, end: bounded, additive: event.shiftKey }); }
+      else if (phase === "move" && selectionBox) setSelectionBox(current => current ? { ...current, end: bounded } : null);
+      else if (phase === "up" && selectionBox) {
+        const left = Math.min(selectionBox.start.x, bounded.x), right = Math.max(selectionBox.start.x, bounded.x), top = Math.min(selectionBox.start.z, bounded.z), bottom = Math.max(selectionBox.start.z, bounded.z);
+        props.onBoxSelect(props.markers.filter(marker => marker.x >= left && marker.x <= right && marker.z >= top && marker.z <= bottom).map(marker => marker.id), selectionBox.additive);
+        setSelectionBox(null); event.target.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
+    if (phase === "up") dragging.current = null;
+    props.onPitchPointer(phase, point.x, point.z);
+  };
   return <><color attach="background" args={[props.theme === "dark" ? "#081217" : "#e7edef"]} /><ambientLight intensity={props.theme === "dark" ? 1.25 : 1.55} /><directionalLight position={[4, 9, 5]} intensity={props.theme === "dark" ? 1.8 : 1.55} castShadow={props.view === "3d"} /><group rotation={[0, props.pitchOrientation === "portrait" ? Math.PI / 2 : 0, 0]}><Pitch goalSize={props.goalSize} preset={props.pitchPreset} style={props.pitchStyle} /><Boards preset={props.pitchPreset} />
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .035, 0]} onPointerMove={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("move", event); }} onPointerUp={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("up", event); }} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; if (props.tool !== "pass" && props.tool !== "run") props.onSelect(null); pointer("down", event); }}><planeGeometry args={[dimensions.length, dimensions.width]} /><meshBasicMaterial transparent opacity={0} /></mesh>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .035, 0]} onPointerMove={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("move", event); }} onPointerUp={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("up", event); }} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; if (props.tool !== "select" && props.tool !== "pass" && props.tool !== "run") props.onSelect(null); pointer("down", event); }}><planeGeometry args={[dimensions.length, dimensions.width]} /><meshBasicMaterial transparent opacity={0} /></mesh>
     {props.paths.map(path => { const from = markerMap[path.fromId], targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker || (path.toPoint ? { ...path.toPoint, kind: "point" } : null), timelineEntry = timelineByPath.get(path.id); return from && to && timelineEntry ? <AnimatedPath key={path.id} path={path} from={from} to={to} theme={props.theme} playbackPositionMs={props.playbackPositionMs} showPlaybackFrame={props.showPlaybackFrame} timelineEntry={timelineEntry} timelineTotalMs={timeline.totalMs} selected={path.id === props.selectedPathId} erase={props.tool === "erase"} onSelect={props.onSelectPath} /> : null; })}
     {props.annotations.map(item => <Annotation key={item.id} item={item} erase={props.tool === "erase"} editing={item.id === props.editingTextId} selected={item.id === props.selectedAnnotationId} theme={props.theme} onErase={props.onEraseAnnotation} onSelect={props.onSelectAnnotation} />)}
-    {props.markers.map(marker => <Marker key={marker.id} marker={marker} selected={marker.id === props.selectedId} theme={props.theme} view={props.view} showName={props.showNames && marker.kind !== "goal"} onPointerDown={id => { if (props.tool === "select") dragging.current = id; props.onSelect(id); }} />)}
+    {selectionBox && <SelectionBox start={selectionBox.start} end={selectionBox.end} />}
+    {props.markers.map(marker => <Marker key={marker.id} marker={marker} selected={props.selectedIds.includes(marker.id)} theme={props.theme} view={props.view} showName={props.showNames && marker.kind !== "goal"} onPointerDown={(id, additive) => { if (props.tool === "select") dragging.current = id; props.onSelect(id, additive); }} />)}
     {editingText && <TextEditorTracker item={editingText} inputRef={props.editingInputRef} orientation={props.pitchOrientation} />}</group><CameraControls view={props.view} pitchPreset={props.pitchPreset} pitchOrientation={props.pitchOrientation} resetSignal={props.resetSignal} onZoomChange={props.onZoomChange} />
   </>;
 }

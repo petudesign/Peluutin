@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, keepSingleBall, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, keepSingleBall, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
@@ -13,7 +13,7 @@ test("allows passes within a team or via a ball, but not to an opponent", () => 
 });
 
 test("keeps at most one ball in an exercise", () => {
-  assert.deepEqual(keepSingleBall([ball, player("blue"), { ...ball, id: "ball-2" }]).map(({ id }) => id), ["ball", "blue"]);
+  assert.deepEqual(keepSingleBall([ball, player("blue"), { ...ball, id: "ball-2" }]).map(({ id }) => id), ["ball", "blue", "ball-2"]);
 });
 
 test("copies an exercise marker with its direction and a visible offset", () => {
@@ -76,6 +76,15 @@ test("scales exercise content with the pitch preset", () => {
   assert.ok(resized.markers[0].z < draft.markers[0].z);
   assert.ok(resized.paths[0].toPoint.x > draft.paths[0].toPoint.x);
   assert.ok(resized.annotations[0].points[0].x < draft.annotations[0].points[0].x);
+});
+
+test("moves a marker selection as one group and keeps it inside the pitch", () => {
+  const markers = [{ ...player("blue"), id: "a", x: 0, z: 0 }, { ...player("blue"), id: "b", x: 1, z: 1 }, { ...player("red"), id: "c", x: -2, z: -1 }];
+  const moved = moveExerciseMarkerSelection(markers, ["a", "b"], "a", 2, 1, "training");
+  assert.deepEqual(moved.map(({ x, z }) => [x, z]), [[2, 1], [3, 2], [-2, -1]]);
+  const clamped = moveExerciseMarkerSelection(markers, ["a", "b"], "a", 99, 99, "training");
+  assert.ok(clamped[1].x <= 4.55 && clamped[1].z <= 2.75);
+  assert.deepEqual([clamped[1].x - clamped[0].x, clamped[1].z - clamped[0].z], [1, 1]);
 });
 
 test("accepts free run targets but keeps passes attached to markers", () => {

@@ -57,6 +57,7 @@ export interface ExerciseAnnotation {
   id: string;
   kind: "text" | "draw" | "line" | "rectangle" | "circle";
   color: string;
+  width?: 1 | 2 | 3;
   text?: string;
   points: Array<{ x: number; z: number }>;
 }
@@ -85,6 +86,18 @@ export function resizeExerciseDraftContent(draft: ExerciseDraft, nextPreset: Exe
     paths: draft.paths.map(path => path.toPoint ? { ...path, toPoint: scalePoint(path.toPoint) } : path),
     annotations: draft.annotations.map(annotation => ({ ...annotation, points: annotation.points.map(scalePoint) })),
   };
+}
+
+export function moveExerciseMarkerSelection(markers: ExerciseMarker[], selectedIds: string[], anchorId: string, x: number, z: number, preset: ExercisePitchPreset) {
+  const selected = markers.filter(marker => selectedIds.includes(marker.id));
+  const anchor = selected.find(marker => marker.id === anchorId);
+  if (!anchor || !selected.length) return markers;
+  const dimensions = EXERCISE_PITCH_DIMENSIONS[preset], limitX = dimensions.length / 2 - .25, limitZ = dimensions.width / 2 - .25;
+  const requestedX = x - anchor.x, requestedZ = z - anchor.z;
+  const deltaX = Math.max(-limitX - Math.min(...selected.map(marker => marker.x)), Math.min(requestedX, limitX - Math.max(...selected.map(marker => marker.x))));
+  const deltaZ = Math.max(-limitZ - Math.min(...selected.map(marker => marker.z)), Math.min(requestedZ, limitZ - Math.max(...selected.map(marker => marker.z))));
+  const ids = new Set(selectedIds);
+  return markers.map(marker => ids.has(marker.id) ? { ...marker, x: marker.x + deltaX, z: marker.z + deltaZ } : marker);
 }
 
 export function normalizeExercisePlayerRole(role: ExerciseMarker["role"]): ExercisePlayerRole {
@@ -124,12 +137,10 @@ export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
 }
 
 export function keepSingleBall(markers: ExerciseMarker[]) {
-  let hasBall = false;
-  return markers.filter((marker) => marker.kind !== "ball" || (!hasBall && (hasBall = true)));
+  return markers;
 }
 
 export function createExerciseMarkerCopy(markers: ExerciseMarker[], source: ExerciseMarker, sequence: number, id: string) {
-  if (source.kind === "ball" && markers.some(marker => marker.kind === "ball")) return null;
   if (source.kind === "player" && source.team && !canAddTeamPlayer(markers, source.team)) return null;
   const offset = Math.max(1, sequence) * .32;
   return {
@@ -208,56 +219,21 @@ export function getNextExercisePathStartMs(paths: ExercisePath[], markers: Exerc
   return paths.length ? Math.ceil(buildExerciseTimeline(paths, markers).totalMs / 100) * 100 : 0;
 }
 
-function intervalsOverlap(startA: number, durationA: number, startB: number, durationB: number) {
-  return startA < startB + durationB && startA + durationA > startB;
-}
-
 export function setExercisePathStartMs(paths: ExercisePath[], pathId: string, requestedStartMs: number, markers: ExerciseMarker[]) {
-  const normalized = normalizeExerciseTimeline(paths, markers), selected = normalized.find(path => path.id === pathId);
-  if (!selected) return normalized;
-  const duration = getExercisePathDurationMs(selected, markers);
-  let startMs = Math.max(0, Math.round(requestedStartMs / 50) * 50);
-  if (isExerciseBallPath(selected.kind)) {
-    const others = normalized.filter(path => path.id !== pathId && isExerciseBallPath(path.kind))
-      .map(path => ({ start: path.startMs ?? 0, duration: getExercisePathDurationMs(path, markers) }))
-      .sort((a, b) => a.start - b.start);
-    for (let attempt = 0; attempt <= others.length; attempt += 1) {
-      const overlap = others.find(other => intervalsOverlap(startMs, duration, other.start, other.duration));
-      if (!overlap) break;
-      const before = overlap.start - duration;
-      const after = overlap.start + overlap.duration;
-      startMs = before >= 0 && Math.abs(startMs - before) <= Math.abs(after - startMs) ? before : after;
-    }
-  }
-  return normalized.map(path => path.id === pathId ? { ...path, startMs: Math.max(0, Math.round(startMs)) } : path);
+  const normalized = normalizeExerciseTimeline(paths, markers);
+  const startMs = Math.max(0, Math.round(requestedStartMs / 50) * 50);
+  return normalized.map(path => path.id === pathId ? { ...path, startMs } : path);
 }
 
 export function setExercisePathDurationMs(paths: ExercisePath[], pathId: string, requestedDurationMs: number, markers: ExerciseMarker[]) {
   const normalized = normalizeExerciseTimeline(paths, markers), selected = normalized.find(path => path.id === pathId);
   if (!selected) return normalized;
   let durationMs = Math.min(EXERCISE_MAX_DURATION_MS, Math.max(EXERCISE_MIN_DURATION_MS, Math.round(requestedDurationMs / 50) * 50));
-  if (isExerciseBallPath(selected.kind)) {
-    const nextPass = normalized.filter(path => path.id !== pathId && isExerciseBallPath(path.kind) && (path.startMs ?? 0) > (selected.startMs ?? 0))
-      .sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0))[0];
-    if (nextPass) durationMs = Math.min(durationMs, Math.max(EXERCISE_MIN_DURATION_MS, (nextPass.startMs ?? 0) - (selected.startMs ?? 0)));
-  }
   return normalized.map(path => path.id === pathId ? { ...path, durationMs } : path);
 }
 
 export function resetExercisePathDuration(paths: ExercisePath[], pathId: string, markers: ExerciseMarker[]) {
-  let normalized = normalizeExerciseTimeline(paths, markers).map(path => path.id === pathId ? { ...path, durationMs: undefined } : path);
-  const selected = normalized.find(path => path.id === pathId);
-  if (!selected || !isExerciseBallPath(selected.kind)) return normalized;
-  const passes = normalized.filter(path => isExerciseBallPath(path.kind)).sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
-  const selectedIndex = passes.findIndex(path => path.id === pathId);
-  for (let index = Math.max(1, selectedIndex + 1); index < passes.length; index += 1) {
-    const previous = passes[index - 1], current = passes[index];
-    const earliestStart = (previous.startMs ?? 0) + getExercisePathDurationMs(previous, markers);
-    if ((current.startMs ?? 0) < earliestStart) current.startMs = Math.round(earliestStart);
-  }
-  const starts = new Map(passes.map(path => [path.id, path.startMs]));
-  normalized = normalized.map(path => starts.has(path.id) ? { ...path, startMs: starts.get(path.id)! } : path);
-  return normalized;
+  return normalizeExerciseTimeline(paths, markers).map(path => path.id === pathId ? { ...path, durationMs: undefined } : path);
 }
 
 export function getExerciseTimelineProgressAt(positionMs: number, entry: ExerciseTimelineEntry, totalMs: number) {
