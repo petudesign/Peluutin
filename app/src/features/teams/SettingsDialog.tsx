@@ -74,7 +74,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && finishSettings()}>
       <section className="settings-modal team-management-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div className="settings-header">
-              <div><span className="eyebrow">PELAAJAT JA KOKOONPANOT</span><h2 id="settings-title">Joukkueet</h2><p className="autosave-note">Muutokset tallentuvat automaattisesti.</p></div>
+              <div><h2 id="settings-title">Joukkueet</h2><p className="autosave-note">Muutokset tallentuvat automaattisesti.</p></div>
               <div className="settings-header-actions">
                 <button className="mobile-team-settings" aria-label="Asetukset" onClick={onOpenAppSettings}><Settings size={18} aria-hidden="true"/></button>
                 <button className="close-button" onClick={finishSettings}>Valmis</button>
@@ -82,7 +82,6 @@ export function SettingsDialog(props: SettingsDialogProps) {
         </div>
         <div className="settings-layout">
           <aside className="team-settings">
-            <h3>Joukkueet</h3>
             <div className="team-list">
               {teams.map((item) => {
                 const isActive = item.id === teamId;

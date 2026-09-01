@@ -159,6 +159,7 @@ function Marker({ marker, animatedPosition, selected, theme, view, showName, lab
   const selectionRadius = marker.kind === "player" ? [.26, .31] : marker.kind === "bench" || marker.kind === "ladder" ? [.62, .69] : marker.kind === "dummy" || marker.kind === "tall-cone" ? [.2, .25] : marker.kind === "goal" ? [goalRadius + .08, goalRadius + .14] : [.14, .19];
   const nameY = marker.kind === "dummy" && view === "3d" ? .82 : marker.kind === "player" ? .31 : .24;
   const nameZ = view === "2d" && marker.kind === "dummy" ? -.3 : view === "2d" && marker.kind !== "player" ? -.2 : 0;
+  const spriteScale = ((view === "2d" ? [1.52, .42, 1] : [1.35, .37, 1]).map(value => value * labelScale)) as [number, number, number];
   return <group position={[animatedPosition?.x ?? marker.x, baseY, animatedPosition?.z ?? marker.z]} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (!interactive) return; event.stopPropagation(); onPointerDown(marker.id, event.shiftKey); }}>
     {marker.kind === "ball" && <SoccerBall radius={.1} castShadow={view === "3d"} />}
     {marker.kind === "player" && <><mesh castShadow={view === "3d"}><cylinderGeometry args={[.19, .19, .12, 32]} /><meshStandardMaterial color={color} roughness={.4} emissive={selected ? color : "#000"} emissiveIntensity={selected ? .35 : 0} /></mesh><mesh position={[0, .065, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[.14, .18, 32]} /><meshBasicMaterial color={ringColor} /></mesh></>}
@@ -168,11 +169,12 @@ function Marker({ marker, animatedPosition, selected, theme, view, showName, lab
     {marker.kind === "ladder" && <group rotation={[0, THREE.MathUtils.degToRad(marker.rotation ?? 0), 0]}>{[-.22, .22].map(z => <mesh key={z} position={[0, .018, z]}><boxGeometry args={[1.2, .025, .035]} /><meshStandardMaterial color={color} roughness={.65} /></mesh>)}{[-.48, -.24, 0, .24, .48].map(x => <mesh key={x} position={[x, .02, 0]}><boxGeometry args={[.035, .028, .44]} /><meshStandardMaterial color={color} roughness={.65} /></mesh>)}</group>}
     {marker.kind === "dummy" && <group rotation={[0, THREE.MathUtils.degToRad(marker.rotation ?? 0), 0]}>{view === "2d" ? <group><mesh position={[0, .032, .01]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[.34, .14]} /><meshBasicMaterial color="#26343a" /></mesh><mesh position={[0, .036, .01]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[.29, .09]} /><meshBasicMaterial color={color} /></mesh><mesh position={[0, .041, -.145]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.09, 24]} /><meshBasicMaterial color="#26343a" /></mesh><mesh position={[0, .045, -.145]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.065, 24]} /><meshBasicMaterial color={color} /></mesh></group> : <group><mesh position={[0, .045, 0]}><boxGeometry args={[.31, .06, .09]} /><meshStandardMaterial color="#26343a" roughness={.7} /></mesh>{[-.085, .085].map(x => <mesh key={x} position={[x, .235, 0]}><cylinderGeometry args={[.014, .014, .34, 10]} /><meshStandardMaterial color={color} roughness={.5} /></mesh>)}<mesh position={[0, .43, 0]}><boxGeometry args={[.27, .28, .05]} /><meshStandardMaterial color={color} roughness={.5} emissive={selected ? "#526600" : "#000"} emissiveIntensity={selected ? .3 : 0} /></mesh><mesh position={[0, .65, 0]}><torusGeometry args={[.095, .02, 10, 24]} /><meshStandardMaterial color={color} roughness={.5} /></mesh></group>}</group>}
     {marker.kind === "goal" && <group rotation={[0, THREE.MathUtils.degToRad(marker.rotation ?? 0), 0]}><Goal x={0} flip size={marker.goalSize ?? "youth"} /></group>}
-    {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .01, 0]}><ringGeometry args={[selectionRadius[0], selectionRadius[1], 36]} /><meshBasicMaterial color="#f3a712" /></mesh>}{showName && <sprite position={[0, nameY, nameZ]} scale={(view === "2d" ? [1.52, .42, 1] : [1.35, .37, 1]).map(value => value * labelScale)}><spriteMaterial map={texture} transparent depthTest={false} /></sprite>}
+    {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .01, 0]}><ringGeometry args={[selectionRadius[0], selectionRadius[1], 36]} /><meshBasicMaterial color="#f3a712" /></mesh>}{showName && <sprite position={[0, nameY, nameZ]} scale={spriteScale}><spriteMaterial map={texture} transparent depthTest={false} /></sprite>}
   </group>;
 }
 
 type PathTarget = { x: number; z: number; kind: ExerciseMarker["kind"] | "point" };
+type PointerCaptureTarget = { setPointerCapture: (pointerId: number) => void; releasePointerCapture: (pointerId: number) => void };
 
 function createPathCurve(path: ExercisePath, from: ExerciseMarker, to: PathTarget, inset = true) {
   const direction = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize();
@@ -258,12 +260,12 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
     const point = pitchPoint(event.point), bounded = { x: THREE.MathUtils.clamp(point.x, -limitX, limitX), z: THREE.MathUtils.clamp(point.z, -limitZ, limitZ) };
     if (phase === "move" && dragging.current) props.onMove(dragging.current, bounded.x, bounded.z);
     if (props.tool === "select" && !dragging.current && props.interactive !== false) {
-      if (phase === "down") { event.target.setPointerCapture(event.pointerId); if (!event.shiftKey) props.onSelect(null); setSelectionBox({ start: bounded, end: bounded, additive: event.shiftKey }); }
+      if (phase === "down") { (event.target as unknown as PointerCaptureTarget).setPointerCapture(event.pointerId); if (!event.shiftKey) props.onSelect(null); setSelectionBox({ start: bounded, end: bounded, additive: event.shiftKey }); }
       else if (phase === "move" && selectionBox) setSelectionBox(current => current ? { ...current, end: bounded } : null);
       else if (phase === "up" && selectionBox) {
         const left = Math.min(selectionBox.start.x, bounded.x), right = Math.max(selectionBox.start.x, bounded.x), top = Math.min(selectionBox.start.z, bounded.z), bottom = Math.max(selectionBox.start.z, bounded.z);
         props.onBoxSelect(props.markers.filter(marker => marker.x >= left && marker.x <= right && marker.z >= top && marker.z <= bottom).map(marker => marker.id), selectionBox.additive);
-        setSelectionBox(null); event.target.releasePointerCapture(event.pointerId);
+        setSelectionBox(null); (event.target as unknown as PointerCaptureTarget).releasePointerCapture(event.pointerId);
       }
       return;
     }

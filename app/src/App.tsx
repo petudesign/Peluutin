@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
-import type { Formation, MatchRecord, PlayerId, ScheduledMatch, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
+import type { ActiveMatch, Formation, MatchRecord, PlayerId, ScheduledMatch, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
 import { Onboarding } from "./components/Onboarding";
@@ -15,9 +15,11 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
+import { AnalyticsView } from "./features/match/AnalyticsView";
 import { changePlayerGoal } from "./features/match/matchLogic";
 import { scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
+import type { PeluutinBackup } from "./data/backup";
 
 const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
@@ -47,6 +49,7 @@ export function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
+  const [historyTeamId, setHistoryTeamId] = useState(initialTeam?.id || "");
   const [onboardingTeamName, setOnboardingTeamName] = useState("");
   const [onboardingPlayerTeamId, setOnboardingPlayerTeamId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -55,6 +58,7 @@ export function App() {
   const [settingsTeamId, setSettingsTeamId] = useState(initialTeam?.id || "");
   const [newMatchOpen, setNewMatchOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [endMatchOpen, setEndMatchOpen] = useState(false);
   const [discardMatchOpen, setDiscardMatchOpen] = useState(false);
   const [resetClockOpen, setResetClockOpen] = useState(false);
@@ -128,6 +132,11 @@ export function App() {
   }, [teams]);
 
   useEffect(() => {
+    if (historyTeamId && teams.some((team) => team.id === historyTeamId)) return;
+    setHistoryTeamId(teamId || teams[0]?.id || "");
+  }, [historyTeamId, teamId, teams]);
+
+  useEffect(() => {
     matchRepository.saveScheduledMatches(scheduledMatches);
   }, [scheduledMatches]);
 
@@ -158,12 +167,12 @@ export function App() {
   }, [matchCreated, matchEnded, activeScheduledMatchId, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals]);
 
   useEffect(() => {
-    const modalOpen = settingsOpen || appSettingsOpen || newMatchOpen || gamesOpen || endMatchOpen || discardMatchOpen || resetClockOpen || deleteTeamOpen;
+    const modalOpen = settingsOpen || appSettingsOpen || newMatchOpen || gamesOpen || analyticsOpen || endMatchOpen || discardMatchOpen || resetClockOpen || deleteTeamOpen;
     if (!modalOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previousOverflow; };
-  }, [settingsOpen, appSettingsOpen, newMatchOpen, gamesOpen, endMatchOpen, discardMatchOpen, resetClockOpen, deleteTeamOpen]);
+  }, [settingsOpen, appSettingsOpen, newMatchOpen, gamesOpen, analyticsOpen, endMatchOpen, discardMatchOpen, resetClockOpen, deleteTeamOpen]);
 
   useEffect(() => {
     if (!running) return;
@@ -181,6 +190,7 @@ export function App() {
   const activateTeam = (nextTeam: Team) => {
     const nextFormation = (nextTeam.formations || defaultFormations)[0];
     setTeamId(nextTeam.id);
+    setHistoryTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
     setFormation(nextFormation.id);
     setLineup(nextTeam.players.slice(0, nextFormation.slots.length).map((player) => player.id));
@@ -198,10 +208,11 @@ export function App() {
   };
 
   const openTeamSettings = () => {
-    if (!homeTeam) return;
-    setSettingsTeamId(homeTeam.id);
-    setTeamNameDraft(homeTeam.name);
-    setNewFormationTeamSize(activeFormation?.teamSize || 8);
+    const nextTeam = teams.find((item) => item.id === settingsTeamId) || homeTeam;
+    if (!nextTeam) return;
+    setSettingsTeamId(nextTeam.id);
+    setTeamNameDraft(nextTeam.name);
+    setNewFormationTeamSize(nextTeam.formations?.[0]?.teamSize || activeFormation?.teamSize || 8);
     setSettingsOpen(true);
   };
 
@@ -370,6 +381,49 @@ export function App() {
     })),
   });
 
+  const activeMatchSnapshot: ActiveMatch | null = matchCreated && !matchEnded && homeTeam ? {
+    scheduledMatchId: activeScheduledMatchId,
+    teamId: homeTeam.id,
+    opponent,
+    venue,
+    activePlayerIds,
+    formation,
+    lineup,
+    seconds,
+    score,
+    minutes,
+    goals,
+  } : null;
+
+  const restoreBackup = (backup: PeluutinBackup) => {
+    setTeams(backup.teams);
+    setScheduledMatches(backup.scheduledMatches);
+    const restored = backup.activeMatch;
+    const nextTeam = backup.teams.find((team) => team.id === restored?.teamId) || backup.teams[0];
+    if (!nextTeam) return;
+
+    setTeamId(nextTeam.id);
+    setHistoryTeamId(nextTeam.id);
+    setSettingsTeamId(nextTeam.id);
+    setTeamNameDraft(nextTeam.name);
+    const nextFormation = nextTeam.formations?.find((item) => item.id === restored?.formation) || nextTeam.formations?.[0];
+    setFormation(nextFormation?.id || restored?.formation || defaultFormations[0].id);
+    setActivePlayerIds(restored?.teamId === nextTeam.id ? restored.activePlayerIds : nextTeam.players.map((player) => player.id));
+    setActivePlayerDraft(nextTeam.players.map((player) => player.id));
+    setLineup(restored?.teamId === nextTeam.id ? restored.lineup : nextTeam.players.slice(0, nextFormation?.slots.length || 8).map((player) => player.id));
+    setOpponent(restored?.teamId === nextTeam.id ? restored.opponent : "");
+    setVenue(restored?.teamId === nextTeam.id ? restored.venue : "home");
+    setSeconds(restored?.teamId === nextTeam.id ? restored.seconds : 0);
+    setScore(restored?.teamId === nextTeam.id ? restored.score : [0, 0]);
+    setMinutes(restored?.teamId === nextTeam.id ? restored.minutes : Object.fromEntries(nextTeam.players.map((player) => [player.id, 0])));
+    setGoals(restored?.teamId === nextTeam.id ? restored.goals : {});
+    setActiveScheduledMatchId(restored?.teamId === nextTeam.id ? restored.scheduledMatchId : undefined);
+    setMatchCreated(Boolean(restored?.teamId === nextTeam.id));
+    setMatchEnded(false);
+    setRunning(false);
+    setSelected(null);
+  };
+
   const saveMatch = () => {
     const match = currentMatchData();
     updateCurrentTeam((team) => ({ ...team, history: [match, ...(team.history || [])] }));
@@ -481,6 +535,7 @@ export function App() {
     const nextLineup = scheduled.lineup.filter((id) => playerIds.has(id));
     nextActive.forEach((id) => { if (nextLineup.length < teamFormation.slots.length && !nextLineup.includes(id)) nextLineup.push(id); });
     setTeamId(team.id);
+    setHistoryTeamId(team.id);
     setOpponent(scheduled.opponent);
     setVenue(scheduled.venue);
     setActivePlayerIds(nextActive);
@@ -679,10 +734,13 @@ export function App() {
           canOpen={!matchCreated || matchEnded}
           activeScheduledMatchId={activeScheduledMatchId}
           currentTeamId={teamId}
+          historyTeamId={historyTeamId}
           canSaveMatch={matchCreated}
           historyNotice={historyNotice}
           formatTime={formatTime}
           onNewMatch={() => { setGamesOpen(false); openNewMatch(); }}
+          onHistoryTeamChange={setHistoryTeamId}
+          onOpenAnalytics={() => { setGamesOpen(false); setAnalyticsOpen(true); }}
           onOpen={openScheduledMatch}
           onDelete={(id) => setScheduledMatches((current) => current.filter((item) => item.id !== id))}
           onSaveMatch={saveMatch}
@@ -705,6 +763,15 @@ export function App() {
             setEndMatchOpen(false);
             setDiscardMatchOpen(true);
           }}
+        />
+      )}
+
+      {analyticsOpen && (
+        <AnalyticsView
+          teams={teams}
+          selectedTeamId={historyTeamId}
+          onSelectedTeamChange={setHistoryTeamId}
+          onClose={() => setAnalyticsOpen(false)}
         />
       )}
 
@@ -778,8 +845,13 @@ export function App() {
       {appSettingsOpen && (
         <AppSettingsDialog
           theme={theme}
+          teams={teams}
+          scheduledMatches={scheduledMatches}
+          activeMatch={activeMatchSnapshot}
+          defaultFormations={defaultFormations}
           closeLabel={appSettingsReturnToTeams ? "Takaisin" : "Sulje"}
           onThemeChange={setTheme}
+          onRestoreBackup={restoreBackup}
           onClose={() => {
             setAppSettingsOpen(false);
             if (appSettingsReturnToTeams) setSettingsOpen(true);

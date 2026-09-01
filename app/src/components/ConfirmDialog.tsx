@@ -33,7 +33,7 @@ export function ConfirmDialog({
           <button className={danger ? "danger-confirm" : ""} onClick={onConfirm}>{confirmLabel}</button>
         </div>
         {secondaryActionLabel && onSecondaryAction && (
-          <button className="confirm-tertiary danger" onClick={onSecondaryAction}>{secondaryActionLabel}</button>
+          <button className="confirm-tertiary" onClick={onSecondaryAction}>{secondaryActionLabel}</button>
         )}
       </section>
     </div>

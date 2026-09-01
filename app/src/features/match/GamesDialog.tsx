@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { BarChart3, CalendarDays } from "lucide-react";
 import { ScheduledMatchesList } from "../../components/ScheduledMatchesList";
 import type { MatchRecord, ScheduledMatch, Team } from "../../types";
 
@@ -9,10 +8,13 @@ interface GamesDialogProps {
   canOpen: boolean;
   activeScheduledMatchId?: string;
   currentTeamId: string;
+  historyTeamId: string;
   canSaveMatch: boolean;
   historyNotice: string;
   formatTime: (seconds: number) => string;
   onNewMatch: () => void;
+  onHistoryTeamChange: (teamId: string) => void;
+  onOpenAnalytics: () => void;
   onOpen: (match: ScheduledMatch) => void;
   onDelete: (id: string) => void;
   onSaveMatch: () => void;
@@ -22,16 +24,15 @@ interface GamesDialogProps {
 }
 
 export function GamesDialog({
-  matches, teams, canOpen, activeScheduledMatchId, currentTeamId, canSaveMatch, historyNotice, formatTime,
-  onNewMatch, onOpen, onDelete, onSaveMatch, onExportMatch, onDeleteMatch, onClose,
+  matches, teams, canOpen, activeScheduledMatchId, currentTeamId, historyTeamId, canSaveMatch, historyNotice, formatTime,
+  onNewMatch, onHistoryTeamChange, onOpenAnalytics, onOpen, onDelete, onSaveMatch, onExportMatch, onDeleteMatch, onClose,
 }: GamesDialogProps) {
-  const [historyTeamId, setHistoryTeamId] = useState(currentTeamId);
   const historyTeam = teams.find((team) => team.id === historyTeamId) || teams[0];
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="settings-modal games-modal" role="dialog" aria-modal="true" aria-labelledby="games-title">
         <div className="settings-header">
-          <div><span className="eyebrow">OTTELUKALENTERI</span><h2 id="games-title">Pelit</h2></div>
+          <div><h2 id="games-title">Pelit</h2></div>
           <button className="close-button" onClick={onClose}>Sulje</button>
         </div>
         <div className="games-toolbar">
@@ -46,12 +47,15 @@ export function GamesDialog({
             {teams.length > 1 && (
               <label className="history-team-select">
                 <span>Joukkue</span>
-                <select value={historyTeam?.id || ""} onChange={(event) => setHistoryTeamId(event.target.value)}>
+                <select value={historyTeam?.id || ""} onChange={(event) => onHistoryTeamChange(event.target.value)}>
                   {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
               </label>
             )}
-            {canSaveMatch && historyTeam?.id === currentTeamId && <button className="history-save button-primary" onClick={onSaveMatch}>Tallenna peli</button>}
+            <div className="history-actions">
+              {canSaveMatch && historyTeam?.id === currentTeamId && <button className="history-save button-primary" onClick={onSaveMatch}>Tallenna peli</button>}
+              <button className="history-analytics button-secondary" onClick={onOpenAnalytics}><BarChart3 size={16} aria-hidden="true" />Analytiikka</button>
+            </div>
           </div>
           {historyNotice && historyTeam?.id === currentTeamId && <p className="success-note">{historyNotice}</p>}
           <div className="history-list">
