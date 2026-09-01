@@ -66,6 +66,9 @@ export interface ExerciseAnnotation {
 export interface ExerciseDraft {
   name: string;
   notes: string;
+  exerciseTheme?: string;
+  coachingPoints?: string;
+  keyQuestions?: string;
   markers: ExerciseMarker[];
   paths: ExercisePath[];
   annotations: ExerciseAnnotation[];
@@ -138,10 +141,6 @@ export function canTargetExercisePath(kind: ExercisePath["kind"], from: Exercise
 export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
   if (!["player", "ball"].includes(from.kind) || !["player", "ball"].includes(to.kind)) return false;
   return from.kind === "ball" || to.kind === "ball" || from.team === to.team;
-}
-
-export function keepSingleBall(markers: ExerciseMarker[]) {
-  return markers;
 }
 
 export function createExerciseMarkerCopy(markers: ExerciseMarker[], source: ExerciseMarker, sequence: number, id: string) {

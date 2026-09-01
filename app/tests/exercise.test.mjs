@@ -1,19 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, keepSingleBall, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
+import { exerciseDraftContentKey } from "../src/features/exercises/exerciseStorage.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
+
+const draft = {
+  name: "Pienpeli",
+  notes: "Kolme vastaan kolme.",
+  markers: [],
+  paths: [],
+  annotations: [],
+  goalSize: "youth",
+  pitchPreset: "training",
+  pitchOrientation: "landscape",
+  pitchStyle: "grass",
+  updatedAt: "2026-09-01T08:00:00.000Z",
+};
+
+test("compares the saved exercise content without treating its timestamp as an edit", () => {
+  assert.equal(exerciseDraftContentKey(draft), exerciseDraftContentKey({ ...draft, updatedAt: "2026-09-01T09:00:00.000Z" }));
+  assert.equal(exerciseDraftContentKey(draft), exerciseDraftContentKey({ ...draft, exerciseTheme: "", coachingPoints: "", keyQuestions: "" }));
+  assert.notEqual(exerciseDraftContentKey(draft), exerciseDraftContentKey({ ...draft, notes: "Muuttunut kuvaus." }));
+});
+
+test("includes only filled exercise detail sections in the image", () => {
+  assert.deepEqual(getExerciseImageSections({ ...draft, exerciseTheme: "Tilanteenvaihto", coachingPoints: "  ", keyQuestions: "Missä tila on?" }), [
+    { title: "Teema", text: "Tilanteenvaihto" },
+    { title: "Kuvaus ja säännöt", text: "Kolme vastaan kolme." },
+    { title: "Avainkysymykset", text: "Missä tila on?" },
+  ]);
+});
 
 test("allows passes within a team or via a ball, but not to an opponent", () => {
   assert.equal(canPassBetween(player("blue"), player("blue")), true);
   assert.equal(canPassBetween(player("blue"), player("red")), false);
   assert.equal(canPassBetween(player("blue"), ball), true);
   assert.equal(canPassBetween(player("blue"), { id: "cone", kind: "cone", name: "Tötsä", x: 1, z: 1 }), false);
-});
-
-test("keeps at most one ball in an exercise", () => {
-  assert.deepEqual(keepSingleBall([ball, player("blue"), { ...ball, id: "ball-2" }]).map(({ id }) => id), ["ball", "blue", "ball-2"]);
 });
 
 test("copies an exercise marker with its direction and a visible offset", () => {
@@ -83,7 +108,8 @@ test("moves a marker selection as one group and keeps it inside the pitch", () =
   const moved = moveExerciseMarkerSelection(markers, ["a", "b"], "a", 2, 1, "training");
   assert.deepEqual(moved.map(({ x, z }) => [x, z]), [[2, 1], [3, 2], [-2, -1]]);
   const clamped = moveExerciseMarkerSelection(markers, ["a", "b"], "a", 99, 99, "training");
-  assert.ok(clamped[1].x <= 4.55 && clamped[1].z <= 2.75);
+  const dimensions = EXERCISE_PITCH_DIMENSIONS.training;
+  assert.ok(clamped[1].x <= dimensions.length / 2 - .25 && clamped[1].z <= dimensions.width / 2 - .25);
   assert.deepEqual([clamped[1].x - clamped[0].x, clamped[1].z - clamped[0].z], [1, 1]);
 });
 
@@ -127,7 +153,7 @@ test("supports overlapping runs and a separately timed ball track", () => {
   assert.equal(timeline.totalMs, Math.max(...timeline.entries.map(entry => entry.startMs + entry.durationMs)));
 });
 
-test("keeps ball clips from overlapping when they are dragged", () => {
+test("allows ball clips to overlap when they are dragged", () => {
   const markers = [{ ...player("blue"), x: 0, z: 0 }, { ...player("blue"), id: "blue-2", x: 3, z: 0 }];
   const paths = [
     { id: "first", kind: "pass", fromId: "blue", toId: "blue-2", startMs: 0 },
@@ -136,10 +162,11 @@ test("keeps ball clips from overlapping when they are dragged", () => {
   const moved = setExercisePathStartMs(paths, "second", 100, markers);
   const timeline = buildExerciseTimeline(moved, markers);
   const [first, second] = timeline.entries;
-  assert.ok(second.startMs >= first.startMs + first.durationMs);
+  assert.equal(second.startMs, 100);
+  assert.ok(second.startMs < first.startMs + first.durationMs);
 });
 
-test("trims clips without changing route geometry and protects the next ball clip", () => {
+test("changes a ball clip duration without moving or trimming other clips", () => {
   const markers = [{ ...player("blue"), x: 0, z: 0 }, { ...player("blue"), id: "blue-2", x: 3, z: 0 }];
   const paths = [
     { id: "first", kind: "pass", fromId: "blue", toId: "blue-2", startMs: 0 },
@@ -147,11 +174,12 @@ test("trims clips without changing route geometry and protects the next ball cli
   ];
   const trimmed = setExercisePathDurationMs(paths, "first", 5000, markers);
   const [first, second] = buildExerciseTimeline(trimmed, markers).entries;
-  assert.equal(first.durationMs, second.startMs - first.startMs);
+  assert.equal(first.durationMs, 5000);
+  assert.equal(second.startMs, 2200);
   assert.equal(trimmed[0].toId, "blue-2");
 });
 
-test("restoring a natural ball duration moves later ball clips instead of overlapping them", () => {
+test("restores a natural ball duration without moving later clips", () => {
   const markers = [{ ...player("blue"), x: 0, z: 0 }, { ...player("blue"), id: "blue-2", x: 3, z: 0 }];
   const paths = [
     { id: "first", kind: "pass", fromId: "blue", toId: "blue-2", startMs: 0, durationMs: 600 },
@@ -160,7 +188,8 @@ test("restoring a natural ball duration moves later ball clips instead of overla
   const restored = resetExercisePathDuration(paths, "first", markers);
   const [first, second] = buildExerciseTimeline(restored, markers).entries;
   assert.equal(restored[0].durationMs, undefined);
-  assert.ok(second.startMs >= first.startMs + first.durationMs);
+  assert.equal(second.startMs, 700);
+  assert.ok(second.startMs < first.startMs + first.durationMs);
 });
 
 test("migrates old phases to continuous start times", () => {

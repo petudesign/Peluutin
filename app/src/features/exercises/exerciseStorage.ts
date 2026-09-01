@@ -69,6 +69,23 @@ export function saveSavedExercises(exercises: SavedExercise[]): void {
   localStorage.setItem(EXERCISE_LIBRARY_STORAGE_KEY, JSON.stringify(exercises));
 }
 
+export function exerciseDraftContentKey(draft: ExerciseDraft): string {
+  return JSON.stringify({
+    name: draft.name,
+    notes: draft.notes,
+    exerciseTheme: draft.exerciseTheme || "",
+    coachingPoints: draft.coachingPoints || "",
+    keyQuestions: draft.keyQuestions || "",
+    markers: draft.markers,
+    paths: draft.paths,
+    annotations: draft.annotations,
+    goalSize: draft.goalSize,
+    pitchPreset: draft.pitchPreset,
+    pitchOrientation: draft.pitchOrientation,
+    pitchStyle: draft.pitchStyle,
+  });
+}
+
 export function collectExerciseBackup(teamIds: string[]): ExerciseBackupData {
   const drafts: Record<string, ExerciseDraft> = {};
   teamIds.forEach(teamId => {
