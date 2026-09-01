@@ -1608,6 +1608,8 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
   .exercise-shared.exercise-playing .exercise-zoom-status { left: calc(50% + 116px); }
   .exercise-shared .exercise-zoom-status output { min-width: 54px; padding-inline: 5px; }
   .exercise-shared .exercise-zoom-status button { padding-inline: 6px; }
+  .exercise-shared .exercise-zoom-status button { width: 34px; padding-inline: 0; font-size: 0; }
+  .exercise-shared .exercise-canvas { touch-action: none; }
   .exercise-shared .exercise-shared-notes-toggle { bottom: max(14px, calc(env(safe-area-inset-bottom) + 6px)); left: calc(50% - 144px); }
   .exercise-shared.exercise-playing .exercise-shared-notes-toggle { left: calc(50% - 152px); }
   .exercise-shared .exercise-playback-stack {
