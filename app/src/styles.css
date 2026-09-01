@@ -1525,6 +1525,8 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
 .exercise-desktop-app:not(.exercise-shared) .exercise-header-actions { padding-right:82px; }
 .exercise-share-trigger { top:21px; right:27px; }
 .exercise-share-trigger { right:auto; left:calc(100% - max(27px, calc((100% - 1440px) / 2)) - 64px); }
+.exercise-shared-notes-toggle { position:absolute; z-index:12; bottom:18px; left:18px; display:grid; place-items:center; width:36px; height:36px; border:1px solid rgba(154,190,207,.22); border-radius:9px; background:rgba(13,34,45,.9); color:#dce7eb; box-shadow:0 8px 24px rgba(0,0,0,.28); cursor:pointer; }
+.exercise-shared-notes-toggle.active { border-color:#5da8ff; background:#155bc0; color:#fff; }
 [data-theme="light"] .exercise-timeline-editor { border-color:rgba(35,73,88,.2); background:rgba(248,251,251,.97); color:#17303a; box-shadow:0 12px 32px rgba(31,56,66,.18); }
 [data-theme="light"] .exercise-timeline-editor>header span,[data-theme="light"] .exercise-timeline-editor>header small,[data-theme="light"] .exercise-timeline-labels { color:#607984; }
 [data-theme="light"] .exercise-timeline-editor>header button { color:#45636f; }
@@ -1587,14 +1589,27 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
   .exercise-shared .exercise-header-inner { gap: 7px; }
   .exercise-shared .exercise-header-actions { gap: 5px; }
   .exercise-shared .exercise-stage { inset: 0; }
-  .exercise-shared-2d .exercise-canvas-wrap { transform: translateY(-46px); }
-  .exercise-shared-3d .exercise-canvas-wrap { transform: translateY(-38px); }
+  .exercise-shared-2d .exercise-canvas-wrap { transform: translateY(-20px); }
+  .exercise-shared-3d .exercise-canvas-wrap { transform: translateY(-20px); }
   .exercise-shared .exercise-shared-notes {
-    right: 8px;
-    bottom: 76px;
-    left: 8px;
+    right: auto;
+    bottom: 124px;
+    left: 50%;
+    width: min(320px, calc(100% - 16px));
     max-width: none;
+    max-height: min(45vh, 320px);
+    overflow-y: auto;
+    transform: translateX(-50%);
+    border: 1px solid rgba(154,190,207,.3);
+    background: rgba(13,34,45,.94);
+    box-shadow: 0 12px 30px rgba(0,0,0,.34);
   }
+  .exercise-shared .exercise-zoom-status { right: auto; bottom: max(14px, calc(env(safe-area-inset-bottom) + 6px)); left: calc(50% + 108px); gap: 3px; padding: 3px; }
+  .exercise-shared.exercise-playing .exercise-zoom-status { left: calc(50% + 116px); }
+  .exercise-shared .exercise-zoom-status output { min-width: 54px; padding-inline: 5px; }
+  .exercise-shared .exercise-zoom-status button { padding-inline: 6px; }
+  .exercise-shared .exercise-shared-notes-toggle { bottom: max(14px, calc(env(safe-area-inset-bottom) + 6px)); left: calc(50% - 144px); }
+  .exercise-shared.exercise-playing .exercise-shared-notes-toggle { left: calc(50% - 152px); }
   .exercise-shared .exercise-playback-stack {
     right: 8px;
     bottom: max(8px, env(safe-area-inset-bottom));
@@ -1669,6 +1684,20 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
   .analytics-consent__actions > button {
     flex: 1;
   }
+}
+
+/* Subtle shared 3D button treatment; layout and typography stay unchanged. */
+button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 2px 0 rgba(0,0,0,.18), 0 4px 8px rgba(0,0,0,.08);
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 0 rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.08);
+}
+.exercise-brand,
+.exercise-brand:active:not(:disabled) {
+  box-shadow: none;
+  transform: none;
 }
 /* Root-level recovery shown only when React cannot render the application. */
 .app-error {

@@ -121,7 +121,7 @@ function loadDraft(team: Team): ExerciseDraft {
 export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleTheme }: ExercisePlannerProps) {
   const [draft, setDraft] = useState(() => loadDraft(team));
   useEffect(() => { if (!shared) return; let active = true; decodeExerciseShare().then(sharedDraft => { if (active && sharedDraft) setDraft(sharedDraft); }); return () => { active = false; }; }, [shared, team]);
-  const [view, setView] = useState<ExerciseView>("3d");
+  const [view, setView] = useState<ExerciseView>(() => shared ? "2d" : "3d");
   const [tool, setTool] = useState<ExerciseTool>("select");
   const [openMenu, setOpenMenu] = useState<ToolMenu>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -132,7 +132,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [routesOpen, setRoutesOpen] = useState(false);
-  const [hideNames, setHideNames] = useState(() => localStorage.getItem(HIDE_NAMES_KEY) === "true");
+  const [hideNames, setHideNames] = useState(() => shared ? true : localStorage.getItem(HIDE_NAMES_KEY) === "true");
   const [playing, setPlaying] = useState(false);
   const [playbackStartedAt, setPlaybackStartedAt] = useState(0);
   const [playbackElapsedMs, setPlaybackElapsedMs] = useState(0);
@@ -499,9 +499,10 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
 
   const inspectorOpen = !openMenu && (selectedIds.length > 1 || selected || selectedPath || (selectedAnnotation && selectedAnnotation.kind !== "text"));
 
-  if (shared) return <main className="exercise-shell"><section className={`exercise-desktop-app exercise-shared exercise-shared-${view}`}>
+  if (shared) return <main className="exercise-shell"><section className={`exercise-desktop-app exercise-shared exercise-shared-${view} ${playing ? "exercise-playing" : ""}`}>
     <header className="exercise-header"><div className="exercise-header-inner"><button className="exercise-icon-button exercise-back-left" onClick={onBack} title="Peluutin-etusivulle"><ArrowLeft size={18} /></button><button className="exercise-brand" onClick={onBack}><img src="/favicon.svg" alt="" /><span className="exercise-brand-lockup"><b>Peluutin</b><small>Jaettu harjoite</small></span></button><span className="exercise-divider" /><strong className="exercise-shared-title">{draft.name}</strong><div className="exercise-header-actions"><div className="exercise-view-switch"><button className={view === "2d" ? "active" : ""} onClick={() => setView("2d")}>2D</button><button className={view === "3d" ? "active" : ""} onClick={() => setView("3d")}>3D</button></div><button className={`exercise-icon-button ${hideNames ? "active" : ""}`} onClick={() => setHideNames(current => !current)}>{hideNames ? <EyeOff size={18} /> : <Eye size={18} />}</button><button className="exercise-icon-button" onClick={onToggleTheme}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div></div></header>
-    <section className="exercise-stage"><ExerciseCanvas theme={theme} view={view} tool="select" markers={draft.markers} paths={draft.paths} annotations={draft.annotations} goalSize={draft.goalSize} pitchPreset={draft.pitchPreset} pitchOrientation="portrait" pitchStyle={draft.pitchStyle} zoomScale={view === "2d" ? 1.12 : 1} showNames={!hideNames} selectedIds={[]} selectedAnnotationId={null} selectedPathId={null} editingTextId={null} playbackPositionMs={playbackPositionMs} showPlaybackFrame={playing || playbackElapsedMs > 0} onSelect={() => {}} onBoxSelect={() => {}} onSelectAnnotation={() => {}} onSelectPath={() => {}} onChangeText={() => {}} onFinishTextEdit={() => {}} onMove={() => {}} onPitchPointer={() => {}} onEraseAnnotation={() => {}} />{draft.notes && <div className="exercise-shared-notes">{draft.notes}</div>}</section>
+    <section className="exercise-stage"><ExerciseCanvas theme={theme} view={view} tool="select" markers={draft.markers} paths={draft.paths} annotations={draft.annotations} goalSize={draft.goalSize} pitchPreset={draft.pitchPreset} pitchOrientation="portrait" pitchStyle={draft.pitchStyle} zoomScale={view === "2d" ? 1.12 : 1} labelScale={1.2} showResetAtDefault={false} showNames={!hideNames} selectedIds={[]} selectedAnnotationId={null} selectedPathId={null} editingTextId={null} playbackPositionMs={playbackPositionMs} showPlaybackFrame={playing || playbackElapsedMs > 0} onSelect={() => {}} onBoxSelect={() => {}} onSelectAnnotation={() => {}} onSelectPath={() => {}} onChangeText={() => {}} onFinishTextEdit={() => {}} onMove={() => {}} onPitchPointer={() => {}} onEraseAnnotation={() => {}} />{draft.notes && notesOpen && <div className="exercise-shared-notes">{draft.notes}</div>}</section>
+    {draft.notes && <button className={`exercise-shared-notes-toggle ${notesOpen ? "active" : ""}`} onClick={() => setNotesOpen(current => !current)} title={notesOpen ? "Piilota kommentti" : "Avaa kommentti"} aria-label={notesOpen ? "Piilota kommentti" : "Avaa kommentti"} aria-pressed={notesOpen}><StickyNote size={17} /></button>}
     <div className="exercise-playback-stack"><div className="exercise-playback"><button className={playing ? "active" : ""} onClick={togglePlayback}>{playing ? <Pause size={16} /> : <Play size={16} />} {playing ? "Pysäytä" : "Toista"}</button><div className="exercise-speed-switch">{([1, 1.5, 2] as const).map(speed => <button key={speed} className={playbackSpeed === speed ? "active" : ""} onClick={() => { setPlaying(false); setPlaybackSpeed(speed); }}>{speed}×</button>)}</div></div></div>
   </section></main>;
 
