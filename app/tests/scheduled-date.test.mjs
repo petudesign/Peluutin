@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatScheduledDate, formatScheduledDateTime, parseScheduledDate, scheduledDateFromInputValue, scheduledDateToInputValue, scheduledStartError } from "../src/features/match/scheduledDate.ts";
+import { formatScheduledDate, formatScheduledDateTime, isScheduledMatchVisible, parseScheduledDate, scheduledDateFromInputValue, scheduledDateToInputValue, scheduledStartError } from "../src/features/match/scheduledDate.ts";
 
 test("formats and parses Finnish 24-hour match times", () => {
   const date = new Date(2026, 7, 22, 16, 0);
@@ -27,4 +27,16 @@ test("rejects past and duplicate team start times", () => {
   assert.match(scheduledStartError(now, "team-1", [], now), /myöhemmin/);
   assert.match(scheduledStartError(start, "team-1", [{ teamId: "team-1", scheduledAt: start.toISOString() }], now), /samaan ajankohtaan/);
   assert.equal(scheduledStartError(start, "team-2", [{ teamId: "team-1", scheduledAt: start.toISOString() }], now), "");
+});
+
+test("keeps today's scheduled matches visible but hides older unopened matches", () => {
+  const now = new Date(2026, 8, 1, 12, 0);
+  const yesterday = { id: "yesterday", scheduledAt: new Date(2026, 7, 31, 19, 0).toISOString() };
+  const earlierToday = { id: "today", scheduledAt: new Date(2026, 8, 1, 9, 0).toISOString() };
+  const tomorrow = { id: "tomorrow", scheduledAt: new Date(2026, 8, 2, 18, 0).toISOString() };
+
+  assert.equal(isScheduledMatchVisible(yesterday, undefined, now), false);
+  assert.equal(isScheduledMatchVisible(earlierToday, undefined, now), true);
+  assert.equal(isScheduledMatchVisible(tomorrow, undefined, now), true);
+  assert.equal(isScheduledMatchVisible(yesterday, yesterday.id, now), true);
 });

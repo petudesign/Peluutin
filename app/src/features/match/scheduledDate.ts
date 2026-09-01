@@ -43,3 +43,13 @@ export function scheduledStartError(
   }
   return "";
 }
+
+export function isScheduledMatchVisible(
+  match: { id: string; scheduledAt: string },
+  activeScheduledMatchId?: string,
+  now = new Date(),
+) {
+  if (match.id === activeScheduledMatchId) return true;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Date.parse(match.scheduledAt) >= startOfToday;
+}

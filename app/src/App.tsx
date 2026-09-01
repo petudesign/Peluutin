@@ -18,7 +18,7 @@ import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { AnalyticsView } from "./features/match/AnalyticsView";
 import { restoreExerciseBackup } from "./features/exercises/exerciseStorage";
 import { changePlayerGoal } from "./features/match/matchLogic";
-import { scheduledStartError } from "./features/match/scheduledDate";
+import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
 
@@ -89,6 +89,7 @@ export function App() {
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
   const [scheduledMatches, setScheduledMatches] = useState<ScheduledMatch[]>(initialScheduledMatches);
   const [activeScheduledMatchId, setActiveScheduledMatchId] = useState(restoredMatch?.scheduledMatchId);
+  const visibleScheduledMatches = scheduledMatches.filter((match) => isScheduledMatchVisible(match, activeScheduledMatchId));
 
   const homeTeam = teams.find((team) => team.id === teamId) || teams[0] || null;
   const settingsTeam = teams.find((team) => team.id === settingsTeamId) || homeTeam;
@@ -671,7 +672,7 @@ export function App() {
           teamName={homeTeam.name}
           onNewMatch={openNewMatch}
           onOpenSettings={openTeamSettings}
-          scheduledMatches={scheduledMatches}
+          scheduledMatches={visibleScheduledMatches}
           teams={teams}
           onOpenScheduledMatch={openScheduledMatch}
           onDeleteScheduledMatch={(id) => setScheduledMatches((current) => current.filter((item) => item.id !== id))}
@@ -731,7 +732,7 @@ export function App() {
 
       {gamesOpen && (
         <GamesDialog
-          matches={scheduledMatches}
+          matches={visibleScheduledMatches}
           teams={teams}
           canOpen={!matchCreated || matchEnded}
           activeScheduledMatchId={activeScheduledMatchId}
