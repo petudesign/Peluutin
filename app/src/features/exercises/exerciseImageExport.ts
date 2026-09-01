@@ -14,6 +14,11 @@ export function getExerciseImageSections(draft: ExerciseDraft): ExerciseImageSec
   ].filter(section => section.text);
 }
 
+export function getExerciseImageHeight(fieldHeight: number, textHeight: number, hasSections: boolean): number {
+  const fieldTop = 240, sectionGap = hasSections ? 82 : 0, footerSpace = 120;
+  return fieldTop + fieldHeight + sectionGap + textHeight + footerSpace;
+}
+
 function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   return text.split("\n").flatMap(paragraph => {
     const words = paragraph.trim().split(/\s+/).filter(Boolean);
@@ -57,8 +62,8 @@ export async function downloadExerciseImage(draft: ExerciseDraft, teamName: stri
   scratch.font = "34px Arial, sans-serif";
   const sections = getExerciseImageSections(draft).map(section => ({ ...section, lines: wrapText(scratch, section.text, contentWidth) }));
   const fieldHeight = Math.round(contentWidth * Math.min(.7, pitchCanvas.height / pitchCanvas.width));
-  const textHeight = sections.reduce((total, section) => total + 62 + section.lines.length * 48 + 34, 0);
-  const height = Math.max(1800, 260 + fieldHeight + textHeight + 120);
+  const textHeight = sections.reduce((total, section) => total + 45 + section.lines.length * 48 + 34, 0);
+  const height = getExerciseImageHeight(fieldHeight, textHeight, sections.length > 0);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -109,6 +114,8 @@ export async function downloadExerciseImage(draft: ExerciseDraft, teamName: stri
   const blob = await canvasBlob(canvas), url = URL.createObjectURL(blob), link = document.createElement("a");
   link.href = url;
   link.download = `${safeFileName(draft.name)}.png`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

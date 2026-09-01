@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
+import { getExerciseImageHeight, getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
 import { exerciseDraftContentKey } from "../src/features/exercises/exerciseStorage.ts";
 import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
@@ -32,6 +32,12 @@ test("includes only filled exercise detail sections in the image", () => {
     { title: "Kuvaus ja säännöt", text: "Kolme vastaan kolme." },
     { title: "Avainkysymykset", text: "Missä tila on?" },
   ]);
+});
+
+test("sizes the exercise image to its visible content", () => {
+  assert.equal(getExerciseImageHeight(788, 0, false), 1148);
+  assert.equal(getExerciseImageHeight(788, 508, true), 1738);
+  assert.equal(getExerciseImageHeight(788, 988, true), 2218);
 });
 
 test("allows passes within a team or via a ball, but not to an opponent", () => {
