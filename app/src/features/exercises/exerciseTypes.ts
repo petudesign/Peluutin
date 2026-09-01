@@ -1,5 +1,5 @@
 export type ExerciseView = "2d" | "3d";
-export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "dummy" | "goal-small" | "goal-youth" | "goal-full" | "pass" | "run" | "dribble" | "shot" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
+export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "tall-cone" | "bench" | "ladder" | "dummy" | "goal-small" | "goal-youth" | "goal-full" | "pass" | "run" | "dribble" | "shot" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
 export type ExercisePlayerRole = "goalkeeper" | "defender" | "midfielder" | "attacker";
 export type ExerciseGoalSize = "small" | "youth" | "full";
 export type ExercisePitchPreset = "training" | "full";
@@ -20,7 +20,7 @@ export const EXERCISE_ROLE_OPTIONS: Array<{ value: ExercisePlayerRole; label: st
 
 export interface ExerciseMarker {
   id: string;
-  kind: "player" | "ball" | "cone" | "dummy" | "goal";
+  kind: "player" | "ball" | "cone" | "tall-cone" | "bench" | "ladder" | "dummy" | "goal";
   team?: "blue" | "red";
   role?: ExercisePlayerRole | "field";
   color?: string;
@@ -40,6 +40,7 @@ export interface ExercisePath {
   toId?: string;
   toPoint?: { x: number; z: number };
   startMs?: number;
+  timelineLane?: number;
   /** Optional playback duration override. Route geometry stays unchanged. */
   durationMs?: number;
   /** Legacy value kept only for migrating older locally saved drafts. */
@@ -108,6 +109,9 @@ export function getExerciseMarkerColor(marker: ExerciseMarker, _theme: "light" |
   if (marker.color) return marker.color;
   if (marker.kind === "ball") return "#f3aa2b";
   if (marker.kind === "cone") return "#f28a2e";
+  if (marker.kind === "tall-cone") return "#f06d24";
+  if (marker.kind === "bench") return "#8aa0aa";
+  if (marker.kind === "ladder") return "#f3c43c";
   if (marker.kind === "dummy") return "#bfd632";
   if (marker.kind === "goal") return "#e4ebed";
   if (marker.team === "red") return "#545f65";

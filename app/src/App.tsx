@@ -43,7 +43,7 @@ const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 export function App() {
-  const [activeFeature, setActiveFeature] = useState<"matches" | "exercises">(() => window.location.hash === "#harjoitteet" ? "exercises" : "matches");
+  const [activeFeature, setActiveFeature] = useState<"matches" | "exercises">(() => window.location.hash === "#harjoitteet" || window.location.hash.startsWith("#harjoite=") ? "exercises" : "matches");
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
@@ -118,7 +118,7 @@ export function App() {
   }, [activeFeature]);
 
   useEffect(() => {
-    const syncFeatureFromHash = () => setActiveFeature(window.location.hash === "#harjoitteet" ? "exercises" : "matches");
+    const syncFeatureFromHash = () => setActiveFeature(window.location.hash === "#harjoitteet" || window.location.hash.startsWith("#harjoite=") ? "exercises" : "matches");
     window.addEventListener("hashchange", syncFeatureFromHash);
     return () => window.removeEventListener("hashchange", syncFeatureFromHash);
   }, []);
@@ -550,7 +550,9 @@ export function App() {
     analytics.track("feature_opened", { module: "matches" });
   };
 
-  if (!homeTeam) {
+  const sharedExercise = window.location.hash.startsWith("#harjoite=");
+
+  if (!homeTeam && !sharedExercise) {
     return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} />;
   }
 
@@ -575,7 +577,8 @@ export function App() {
     return (
       <Suspense fallback={<main className="exercise-loading">Avataan harjoituseditoria…</main>}>
         <ExercisePlanner
-          team={homeTeam}
+          team={homeTeam || { id: "shared", name: "Jaettu harjoite", players: [], formations: [], history: [] }}
+          shared={sharedExercise}
           theme={theme}
           onBack={closeExercises}
           onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}

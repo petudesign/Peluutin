@@ -1,113 +1,43 @@
-# Harjoitteet MVP — design QA
+# Design QA — kenttätyylit
 
-- Visual reference: user-supplied dark full-screen tactics editor (`codex-clipboard-40d5fb03-84bf-4f3f-a305-142c9f436b77.png`)
-- Verification viewport: desktop browser at 1280 × 720
-- State: dark full-screen editor, populated exercise, 3D view, two animated pass routes
+- Source visual truth: `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-d9a6a046-96a3-4f83-9f80-a1e499ad6216.png`
+- Implementation screenshot: `C:\Users\petsk\.codex\visualizations\2026\08\23\01a02e43-f178-7f00-a141-c6697426a068\peluutin-pitch-grass-qa.png`
+- Comparison image: `C:\Users\petsk\.codex\visualizations\2026\08\23\01a02e43-f178-7f00-a141-c6697426a068\peluutin-pitch-style-comparison-final.png`
+- Viewport: 1440 × 900 CSS px, device density 1
+- Source pixels: 1087 × 403
+- Implementation pixels: 1440 × 900
+- State: Harjoitteet, 3D, iso kenttä, pystysuunta, Nurmi-tyyli, kenttäasetukset avoinna
 
-## Full-view comparison evidence
+## Full-view comparison
 
-- The field now owns the full viewport, matching the reference's canvas-first hierarchy. Header, tool rail, inspector and playback are compact floating overlays instead of permanent page columns.
-- Peluutin branding is retained through the navy panels, blue selected states, orange playback action, Manrope typography and existing logo assets.
-- The pitch uses a dark alternating stripe surface. Outer boundary, halfway line, centre circle and spot, both penalty and goal areas, penalty spots and arcs, corner arcs, goals and perimeter advertising boards are visible.
-- Player tokens are smaller and taller, with bright team colours and a light top rim. 2D tokens do not cast shadows.
-- Routes use a thicker bright line, destination arrow and three visible moving pulses.
+The implementation preserves Peluutin's existing editor composition while matching the selected reference only where requested: a deep natural-green field, broad alternating mowing stripes, restrained contrast and clear white markings. The reference's stadium, character models and surrounding water are intentionally outside this iteration.
+
+## Focused comparison
+
+The comparison image places the reference field and Peluutin's field in one normalized review canvas. A separate detail crop was unnecessary because the requested fidelity target is the large field surface rather than typography or a small control.
 
 ## Required fidelity surfaces
 
-- Layout: compact floating controls preserve the reference's field-dominant workspace without copying its branding.
-- Tools: cursor, two player colours, ball, pass, run, free draw, straight line, rectangle, circle, text and eraser are present as real outline icons with accessible labels.
-- Tablet and mobile: the editor remains available from 721 px upward and is intentionally replaced by the existing larger-screen notice on phones.
-- Persistence: existing local drafts remain compatible; missing annotation data is migrated to an empty list and new work continues to autosave locally.
-
-## Interaction evidence
-
-- Production typecheck and all 20 repository tests pass.
-- Production build succeeds; the exercise editor remains a separately loaded chunk.
-- The live browser render was inspected after HMR at the current local preview.
-- The new tool data flow supports click-to-add markers/text, drag-to-draw lines and shapes, object deletion, marker movement and path playback.
-
-## Remaining intentional deviation
-
-- Timeline/phase authoring is deliberately deferred. It will be a separate explicit mode rather than silently recording every canvas edit.
-- Camera presets, templates, equipment libraries and print/export are not part of this iteration.
-
-final result: passed
-
----
-
-# Design QA — Harjoitteet: pelaajat ja maalit
-
-## Evidence
-
-- Reference: `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-4d47ffda-739e-4208-aa75-9c2d07b9619e.png`
-- Implementation: `C:\Users\petsk\AppData\Local\Temp\peluutin-harjoitteet-goal-full.png`
-- Focused comparison: `C:\Users\petsk\AppData\Local\Temp\peluutin-goal-comparison.png`
-- Viewport: 1280 × 720, Harjoitteet, light theme, 3D, junior goal
-
-## Comparison
-
-- The reference goal's readable white front frame and net volume are preserved.
-- The implementation intentionally keeps Peluutin's stylized pitch and restrained palette instead of copying the reference's photorealistic grass and stadium.
-- Extra freestanding support poles from the reference were omitted as requested.
-- The goal front is aligned just outside the end line so the frame no longer sits inside the playing area.
-
-## QA results
-
-- P0: none
-- P1: none
-- P2: none
-- P3: net opacity and density may be tuned after user testing, but the geometry is readable in both themes and both 2D/3D views.
-- Name visibility: passed; player names hide while exercise annotations remain visible.
-- Player roles: passed; own-player roles use distinct colors and opponents remain neutral gray.
-- Goal sizes: passed; small, junior, and full-size presets update the scene and persist in the exercise draft.
-- Automated checks: TypeScript, 38 tests, and production build passed.
-
-## Result
-
-Passed for the requested MVP scope.
-
----
-
-# Design QA — Harjoitteet: elementit ja aikajanan rajat
-
-## Evidence
-
-- Source visual truth: `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-8eb5bbfe-b6fc-46b6-8008-554a32293fc5.png`
-- Browser-rendered implementation: `C:\Users\petsk\AppData\Local\Temp\peluutin-elements-full.png`
-- Focused comparison: `C:\Users\petsk\AppData\Local\Temp\peluutin-elements-comparison.png`
-- Source pixels: 1000 × 1000. Implementation pixels/CSS viewport: 1280 × 720 at 1× density. Focus comparison uses an implementation crop from the same viewport.
-- State: Harjoitteet, light theme, 3D, names hidden, Lisää elementtejä open, exercise mannequin on the field.
-
-## Full-view comparison evidence
-
-- The new element menu stays inside the existing floating tool-rail system and does not increase toolbar density.
-- Ball, cone, and mannequin are presented as three clearly named choices with short usage hints.
-- The mannequin remains legible at normal field scale and uses the reference's loop, torso, legs, bright training color, and dark base without copying photorealistic material noise into the diagram style.
-
-## Focused comparison evidence
-
-- The source and implementation were combined in one comparison image. The simplified 3D model preserves the source object's identifying silhouette while matching Peluutin's low-detail field markers.
-- The source's perforated torso is intentionally omitted at this scale because it would shimmer and reduce clarity in the zoomable 3D scene.
-
-## Interaction and accessibility checks
-
-- Lisää elementtejä opens from the tool rail; mannequin placement and deletion work in the rendered browser.
-- The mannequin has separate readable 2D and 3D representations.
-- The timeline playhead exposes a larger visible handle and uses grab/grabbing cursors instead of a resize cursor.
-- Clip trim handles expose `aria-valuemax="5000"`; duration logic also clamps natural and edited clips to 5000 ms.
-- Ball remains limited to one and equipment cannot be used as a pass endpoint.
-- TypeScript, 38 automated tests, and the production build pass. The rendered view showed no visible runtime error state.
-
-## Findings
-
-- P0: none.
-- P1: none.
-- P2: none.
-- P3: the mannequin torso could receive a very subtle punched-hole material later if testing shows the detail remains stable at ordinary zoom levels.
+- Fonts and typography: existing Peluutin typography is unchanged; the source offers no applicable UI typography target.
+- Spacing and layout rhythm: existing editor layout is preserved. The new two-option style control follows the same spacing and button grid as field size and orientation.
+- Colors and visual tokens: grass colors use muted forest greens with a small stripe delta; dark style preserves the existing charcoal palette.
+- Image quality and asset fidelity: no raster asset is required for the procedural pitch surface. No stadium or player-character asset was substituted.
+- Copy and content: controls are named `Tumma` and `Nurmi`; no reference-only options were added.
 
 ## Comparison history
 
-- Initial state had no equipment library, used a direct ball toolbar action, allowed clip durations beyond the intended limit, and showed an east-west resize cursor on the playhead.
-- The final state groups equipment, adds cone/mannequin models, clamps all clips to five seconds, and gives the playhead a dedicated grab affordance.
+1. Initial grass pass was too saturated and the stripes had overly strong contrast (P2).
+2. Grass colors were muted and stripe materials were changed to rough, light-reactive materials.
+3. Post-fix comparison shows the requested natural-green balance and lower stripe contrast with no remaining P0/P1/P2 mismatch.
+
+## Interaction checks
+
+- Tumma → Nurmi and Nurmi → Tumma update the field without changing exercise content.
+- Existing field size, orientation and goal-size controls remain available.
+- Browser console: no errors.
+
+## Follow-up polish
+
+- P3: subtle procedural turf variation could add realism later, but it is not necessary for the current two-style MVP.
 
 final result: passed
