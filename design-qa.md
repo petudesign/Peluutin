@@ -1,43 +1,38 @@
-# Design QA — kenttätyylit
+**Source visual truth**
 
-- Source visual truth: `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-d9a6a046-96a3-4f83-9f80-a1e499ad6216.png`
-- Implementation screenshot: `C:\Users\petsk\.codex\visualizations\2026\08\23\01a02e43-f178-7f00-a141-c6697426a068\peluutin-pitch-grass-qa.png`
-- Comparison image: `C:\Users\petsk\.codex\visualizations\2026\08\23\01a02e43-f178-7f00-a141-c6697426a068\peluutin-pitch-style-comparison-final.png`
-- Viewport: 1440 × 900 CSS px, device density 1
-- Source pixels: 1087 × 403
-- Implementation pixels: 1440 × 900
-- State: Harjoitteet, 3D, iso kenttä, pystysuunta, Nurmi-tyyli, kenttäasetukset avoinna
+- `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-30911371-5beb-4853-aa42-c56f72a49647.png`
+- Source pixels: 482 × 295.
 
-## Full-view comparison
+**Implementation evidence**
 
-The implementation preserves Peluutin's existing editor composition while matching the selected reference only where requested: a deep natural-green field, broad alternating mowing stripes, restrained contrast and clear white markings. The reference's stadium, character models and surrounding water are intentionally outside this iteration.
+- `C:\Users\petsk\Documents\Vaihto\design-qa-implementation.png`
+- Header crop: `C:\Users\petsk\Documents\Vaihto\design-qa-implementation-header.png`
+- Side-by-side comparison: `C:\Users\petsk\Documents\Vaihto\design-qa-comparison.png`
+- Browser viewport and implementation pixels: 482 × 800 at 1× density; comparison crop 482 × 96.
+- State: existing match, mobile breakpoint, dark theme, sport menu closed.
 
-## Focused comparison
+**Findings**
 
-The comparison image places the reference field and Peluutin's field in one normalized review canvas. A separate detail crop was unnecessary because the requested fidelity target is the large field surface rather than typography or a small control.
+- No actionable P0–P2 mismatches for the requested change. The sport selector now shares the score-and-clock row and remains separated from the home score control.
+- Fonts and typography: existing application typography is preserved; content differs from the reference because live local match data is used.
+- Spacing and layout rhythm: the selector, team scores, and clock are vertically centered on one row. The compact spacing remains usable at the tested 482 px width.
+- Colors and visual tokens: the implementation uses the currently selected dark theme; the reference is light. No theme tokens were changed for this layout-only request.
+- Image quality and asset fidelity: the existing vector Peluutin favicon remains sharp and correctly scaled.
+- Copy and content: existing labels and match state are preserved.
 
-## Required fidelity surfaces
+**Interaction and technical checks**
 
-- Fonts and typography: existing Peluutin typography is unchanged; the source offers no applicable UI typography target.
-- Spacing and layout rhythm: existing editor layout is preserved. The new two-option style control follows the same spacing and button grid as field size and orientation.
-- Colors and visual tokens: grass colors use muted forest greens with a small stripe delta; dark style preserves the existing charcoal palette.
-- Image quality and asset fidelity: no raster asset is required for the procedural pitch surface. No stadium or player-character asset was substituted.
-- Copy and content: controls are named `Tumma` and `Nurmi`; no reference-only options were added.
+- Sport selector opens the Jalkapallo/Futsal menu and closes again.
+- Browser console errors checked: none.
+- Focused comparison used the 96 px header crop because the requested change affects only the mobile header.
 
-## Comparison history
+**Comparison history**
 
-1. Initial grass pass was too saturated and the stripes had overly strong contrast (P2).
-2. Grass colors were muted and stripe materials were changed to rough, light-reactive materials.
-3. Post-fix comparison shows the requested natural-green balance and lower stripe contrast with no remaining P0/P1/P2 mismatch.
+- Initial implementation moved `.mobile-brand-sport` from the separate upper position to vertical center with `top: 50%` and `translateY(-50%)`.
+- Post-fix evidence confirms the control sits on the same level as the score and clock controls without overlap at 482 px.
 
-## Interaction checks
+**Follow-up polish**
 
-- Tumma → Nurmi and Nurmi → Tumma update the field without changing exercise content.
-- Existing field size, orientation and goal-size controls remain available.
-- Browser console: no errors.
-
-## Follow-up polish
-
-- P3: subtle procedural turf variation could add realism later, but it is not necessary for the current two-style MVP.
+- None required for this experiment. Narrower mobile widths can be revisited only if real-device testing exposes crowding.
 
 final result: passed

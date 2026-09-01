@@ -58,6 +58,21 @@ test("stores up to three formations for each supported team size", () => {
   assert.deepEqual(team.formations.map(({ id }) => id), ["5a", "5b", "5c", "8a", "8b", "8c", "11a", "11b", "11c"]);
 });
 
+test("restores valid field units and removes missing or duplicate players", () => {
+  const [team] = parseTeams(JSON.stringify([{
+    id: "team-1",
+    name: "Futsal",
+    sport: "futsal",
+    players: [{ id: 1, name: "A" }, { id: 2, name: "B" }],
+    fieldUnits: [
+      { id: "unit-1", name: " Ykkönen ", playerIds: [1, 1, 2, 99] },
+      { id: "empty", name: "Tyhjä", playerIds: [99] },
+    ],
+  }]), fallbackFormations);
+
+  assert.deepEqual(team.fieldUnits, [{ id: "unit-1", name: "Ykkönen", playerIds: [1, 2] }]);
+});
+
 test("keeps valid scheduled matches in chronological order", () => {
   const matches = [
     { id: "later", scheduledAt: "2026-08-24T18:00:00.000Z", teamId: "team-1", opponent: "B", venue: "away", formation: "8-a", activePlayerIds: [1], lineup: [1] },

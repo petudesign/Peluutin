@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NAME_MAX_LENGTH } from "../../storage";
-import type { Formation, Player, PlayerId, ScheduledMatch, Team, TeamSize, Venue } from "../../types";
+import type { Formation, Player, PlayerId, ScheduledMatch, Sport, Team, TeamSize, Venue } from "../../types";
 import { formatScheduledDate, parseScheduledDate, scheduledDateFromInputValue, scheduledDateToInputValue, scheduledStartError } from "./scheduledDate";
 
 const defaultScheduledAt = () => {
@@ -28,6 +28,7 @@ interface NewMatchDialogProps {
   onCreate: (formationId: string, lineup: PlayerId[]) => void;
   onSchedule: (scheduledAt: string, formationId: string, lineup: PlayerId[]) => void;
   onClose: () => void;
+  sport: Sport;
 }
 
 export function NewMatchDialog({
@@ -49,10 +50,11 @@ export function NewMatchDialog({
   onCreate,
   onSchedule,
   onClose,
+  sport,
 }: NewMatchDialogProps) {
   const initialFormation = formations.find((item) => item.id === initialFormationId) || formations[0];
   const [step, setStep] = useState<"details" | "lineup">("details");
-  const [teamSize, setTeamSize] = useState<TeamSize>(initialFormation?.teamSize || 8);
+  const [teamSize, setTeamSize] = useState<TeamSize>(sport === "futsal" ? 5 : initialFormation?.teamSize || 8);
   const availableFormations = formations.filter((item) => item.teamSize === teamSize);
   const [formationId, setFormationId] = useState(initialFormation?.id || "");
   const [lineup, setLineup] = useState<PlayerId[]>([]);
@@ -150,13 +152,15 @@ export function NewMatchDialog({
                 value={teamSize}
                 onChange={(event) => {
                   const nextSize = Number(event.target.value) as TeamSize;
-                  setTeamSize(nextSize);
+                  setTeamSize(sport === "futsal" ? 5 : nextSize);
                   setFormationId(formations.find((item) => item.teamSize === nextSize)?.id || "");
                 }}
               >
                 <option value="5">5v5</option>
-                <option value="8">8v8</option>
-                <option value="11">11v11</option>
+                {sport === "football" && <>
+                  <option value="8">8v8</option>
+                  <option value="11">11v11</option>
+                </>}
               </select>
               {!availableFormations.length && <small className="form-warning">Lisää ensin {teamSize}v{teamSize}-muodostelma asetuksissa.</small>}
             </label>

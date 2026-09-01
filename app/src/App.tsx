@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
-import type { ActiveMatch, Formation, MatchRecord, PlayerId, ScheduledMatch, Score, SelectedPlayer, Team, TeamSize, Venue } from "./types";
+import type { ActiveMatch, Formation, MatchRecord, PlayerId, ScheduledMatch, Score, Sport, Team, TeamSize, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
 import { MobileNav } from "./components/MobileNav";
 import { Onboarding } from "./components/Onboarding";
@@ -17,7 +17,7 @@ import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { AnalyticsView } from "./features/match/AnalyticsView";
 import { restoreExerciseBackup } from "./features/exercises/exerciseStorage";
-import { changePlayerGoal } from "./features/match/matchLogic";
+import { applyBatchSubstitution } from "./features/match/matchLogic";
 import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
@@ -39,7 +39,10 @@ const defaultFormations: Formation[] = [
 const initialTeams = matchRepository.loadTeams(defaultFormations);
 const initialActiveMatch = matchRepository.loadActiveMatch();
 const initialScheduledMatches = matchRepository.loadScheduledMatches();
-const initialTeam = initialTeams.find((team) => team.id === initialActiveMatch?.teamId) || initialTeams[0] || null;
+const initialSport: Sport = localStorage.getItem("peluutin-sport") === "futsal" ? "futsal" : "football";
+const initialTeam = initialTeams.find((team) => team.sport === initialSport && team.id === initialActiveMatch?.teamId)
+  || initialTeams.find((team) => team.sport === initialSport)
+  || null;
 const restoredMatch = initialActiveMatch?.teamId === initialTeam?.id ? initialActiveMatch : null;
 
 const formatTime = (seconds: number) =>
@@ -49,6 +52,7 @@ export function App() {
   const [activeFeature, setActiveFeature] = useState<"matches" | "exercises">(() => window.location.hash === "#harjoitteet" || window.location.hash.startsWith("#harjoite=") ? "exercises" : "matches");
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
+  const [sport, setSport] = useState<Sport>(initialSport);
   const [teamId, setTeamId] = useState(initialTeam?.id || "");
   const [historyTeamId, setHistoryTeamId] = useState(initialTeam?.id || "");
   const [onboardingTeamName, setOnboardingTeamName] = useState("");
@@ -81,7 +85,8 @@ export function App() {
   const [formation, setFormation] = useState(restoredMatch?.formation || initialTeam?.formations?.[0]?.id || defaultFormations[0].id);
   const initialFormation = initialTeam?.formations?.find((item) => item.id === (restoredMatch?.formation || initialTeam.formations[0]?.id));
   const [lineup, setLineup] = useState(restoredMatch?.lineup || initialTeam?.players.slice(0, initialFormation?.slots.length || 8).map((p) => p.id) || []);
-  const [selected, setSelected] = useState<SelectedPlayer | null>(null);
+  const [selectedBenchIds, setSelectedBenchIds] = useState<PlayerId[]>([]);
+  const [selectedFieldIndexes, setSelectedFieldIndexes] = useState<number[]>([]);
   const [seconds, setSeconds] = useState(restoredMatch?.seconds || 0);
   const [running, setRunning] = useState(false);
   const [score, setScore] = useState<Score>(restoredMatch?.score || [0, 0]);
@@ -89,30 +94,44 @@ export function App() {
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
   const [scheduledMatches, setScheduledMatches] = useState<ScheduledMatch[]>(initialScheduledMatches);
   const [activeScheduledMatchId, setActiveScheduledMatchId] = useState(restoredMatch?.scheduledMatchId);
-  const visibleScheduledMatches = scheduledMatches.filter((match) => isScheduledMatchVisible(match, activeScheduledMatchId));
+  const sportTeams = teams.filter((team) => team.sport === sport);
+  const visibleScheduledMatches = scheduledMatches.filter((match) => teams.find((team) => team.id === match.teamId)?.sport === sport)
+    .filter((match) => isScheduledMatchVisible(match, activeScheduledMatchId));
 
-  const homeTeam = teams.find((team) => team.id === teamId) || teams[0] || null;
-  const settingsTeam = teams.find((team) => team.id === settingsTeamId) || homeTeam;
+  const homeTeam = teams.find((team) => team.id === teamId && team.sport === sport) || null;
+  const settingsTeam = teams.find((team) => team.id === settingsTeamId && team.sport === sport) || homeTeam;
   const onboardingPlayerTeam = teams.find((team) => team.id === onboardingPlayerTeamId) || null;
   const roster = homeTeam?.players || [];
   const settingsRoster = settingsTeam?.players || [];
   const byId = useMemo(() => Object.fromEntries(roster.map((p) => [p.id, p])), [roster]);
   const activeRoster = roster.filter((player) => activePlayerIds.includes(player.id));
   const bench = activeRoster.filter((p) => !lineup.includes(p.id));
-  const teamFormations = (homeTeam?.formations || defaultFormations).map((item) => ({
+  const sportFormations = (homeTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5);
+  const teamFormations = sportFormations.map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
-  const settingsFormations = (settingsTeam?.formations || defaultFormations).map((item) => ({
+  const settingsFormations = (settingsTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5).map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
   const activeFormation = teamFormations.find((item) => item.id === formation) || teamFormations[0];
   const slots = activeFormation?.slots || defaultFormations[0].slots;
-  const selectedPlayer = selected ? byId[selected.id] : null;
+  const selectedPlayers = selectedBenchIds.length
+    ? selectedBenchIds.map((id) => byId[id]).filter(Boolean)
+    : selectedFieldIndexes.map((index) => byId[lineup[index]]).filter(Boolean);
   const averageSeconds = activeRoster.length
     ? activeRoster.reduce((total, player) => total + (minutes[player.id] || 0), 0) / activeRoster.length
     : 0;
+
+  const clearPlayerSelection = () => {
+    setSelectedBenchIds([]);
+    setSelectedFieldIndexes([]);
+  };
+
+  useEffect(() => {
+    localStorage.setItem("peluutin-sport", sport);
+  }, [sport]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -200,7 +219,7 @@ export function App() {
     setActivePlayerDraft(nextTeam.players.map((player) => player.id));
     setMinutes(Object.fromEntries(nextTeam.players.map((player) => [player.id, 0])));
     setGoals({});
-    setSelected(null);
+    clearPlayerSelection();
     setSeconds(0);
     setScore([0, 0]);
     setRunning(false);
@@ -209,36 +228,66 @@ export function App() {
     setActiveScheduledMatchId(undefined);
   };
 
+  const changeSport = (nextSport: Sport) => {
+    if (nextSport === sport) return;
+    const nextTeam = teams.find((team) => team.sport === nextSport) || null;
+    setSport(nextSport);
+    setTeamId(nextTeam?.id || "");
+    setSettingsTeamId(nextTeam?.id || "");
+    setHistoryTeamId(nextTeam?.id || "");
+    setMatchCreated(false);
+    setMatchEnded(false);
+    setRunning(false);
+    clearPlayerSelection();
+    setActiveScheduledMatchId(undefined);
+  };
+
   const openTeamSettings = () => {
     const nextTeam = teams.find((item) => item.id === settingsTeamId) || homeTeam;
     if (!nextTeam) return;
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.formations?.[0]?.teamSize || activeFormation?.teamSize || 8);
+    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : nextTeam.formations?.[0]?.teamSize || activeFormation?.teamSize || 8);
     setSettingsOpen(true);
   };
 
   const selectSettingsTeam = (nextTeam: Team) => {
+    if (nextTeam.sport !== sport) return;
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.formations?.[0]?.teamSize || 8);
+    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : nextTeam.formations?.[0]?.teamSize || 8);
+  };
+
+  const selectBench = (playerId: PlayerId) => {
+    if (!bench.some((player) => player.id === playerId)) return;
+    setSelectedFieldIndexes([]);
+    setSelectedBenchIds((current) => current.includes(playerId)
+      ? current.filter((id) => id !== playerId)
+      : current.length < 5 ? [...current, playerId] : current);
+  };
+
+  const selectFieldUnit = (fieldUnitId: string) => {
+    const unit = homeTeam?.fieldUnits.find((item) => item.id === fieldUnitId);
+    if (!unit) return;
+    const benchPlayerIds = new Set(bench.map((player) => player.id));
+    const availableIds = unit.playerIds.filter((id) => benchPlayerIds.has(id)).slice(0, 5);
+    if (!availableIds.length) return;
+    setSelectedBenchIds(availableIds);
+    setSelectedFieldIndexes([]);
   };
 
   const selectField = (index: number) => {
-    const player = byId[lineup[index]];
-    if (!player) return;
-    if (!selected) return setSelected({ source: "field", id: player.id, index });
-    if (selected.source === "field" && selected.index === index) return setSelected(null);
-    if (selected.source === "field") {
-      setLineup((current) => {
-        const next = [...current];
-        [next[selected.index], next[index]] = [next[index], next[selected.index]];
-        return next;
-      });
-    } else {
-      setLineup((current) => current.map((id, i) => i === index ? selected.id : id));
+    if (!byId[lineup[index]]) return;
+    const nextIndexes = selectedFieldIndexes.includes(index)
+      ? selectedFieldIndexes.filter((item) => item !== index)
+      : selectedFieldIndexes.length < (selectedBenchIds.length || 5) ? [...selectedFieldIndexes, index] : selectedFieldIndexes;
+
+    if (selectedBenchIds.length && nextIndexes.length === selectedBenchIds.length) {
+      setLineup((current) => applyBatchSubstitution(current, selectedBenchIds, nextIndexes));
+      clearPlayerSelection();
+      return;
     }
-    setSelected(null);
+    setSelectedFieldIndexes(nextIndexes);
   };
 
   const changeFormation = (nextFormation: string) => {
@@ -247,7 +296,7 @@ export function App() {
     if (!next) return;
     setLineup((current) => reorderLineup(current, slots, next.slots));
     setFormation(nextFormation);
-    setSelected(null);
+    clearPlayerSelection();
   };
 
   const updateCurrentTeam = (change: (team: Team) => Team) => {
@@ -261,7 +310,7 @@ export function App() {
   const addTeam = () => {
     const name = cleanName(newTeamName);
     if (!name) return;
-    const team: Team = { id: `team-${Date.now()}`, name, players: [], formations: defaultFormations, history: [] };
+    const team: Team = { id: `team-${Date.now()}`, name, sport, players: [], formations: defaultFormations, fieldUnits: [], history: [] };
     setTeams((current) => [...current, team]);
     setNewTeamName("");
     setSettingsTeamId(team.id);
@@ -273,8 +322,8 @@ export function App() {
   const createFirstTeam = () => {
     const name = cleanName(onboardingTeamName);
     if (!name) return;
-    const team: Team = { id: `team-${Date.now()}`, name, players: [], formations: defaultFormations, history: [] };
-    setTeams([team]);
+    const team: Team = { id: `team-${Date.now()}`, name, sport, players: [], formations: defaultFormations, fieldUnits: [], history: [] };
+    setTeams((current) => [...current, team]);
     setOnboardingTeamName("");
     activateTeam(team);
     setSettingsTeamId(team.id);
@@ -301,7 +350,7 @@ export function App() {
       setActivePlayerDraft([]);
       setMinutes({});
       setGoals({});
-      setSelected(null);
+      clearPlayerSelection();
       setSeconds(0);
       setScore([0, 0]);
       setRunning(false);
@@ -330,7 +379,13 @@ export function App() {
 
   const removePlayer = (playerId: PlayerId) => {
     const remaining = settingsRoster.filter((player) => player.id !== playerId);
-    updateSettingsTeam((team) => ({ ...team, players: remaining }));
+    updateSettingsTeam((team) => ({
+      ...team,
+      players: remaining,
+      fieldUnits: team.fieldUnits
+        .map((unit) => ({ ...unit, playerIds: unit.playerIds.filter((id) => id !== playerId) }))
+        .filter((unit) => unit.playerIds.length),
+    }));
     if (settingsTeamId !== teamId) return;
     setLineup((current) => {
       const next = current.filter((id) => id !== playerId);
@@ -339,7 +394,7 @@ export function App() {
       });
       return next;
     });
-    setSelected(null);
+    clearPlayerSelection();
   };
 
   const addFormation = () => {
@@ -364,6 +419,30 @@ export function App() {
       setFormation(nextFormation.id);
       setLineup((current) => reorderLineup(current, slots, nextFormation.slots));
     }
+  };
+
+  const addFieldUnit = (name: string, playerIds: PlayerId[]) => {
+    const normalizedName = cleanName(name);
+    if (!normalizedName || settingsTeam?.sport !== "futsal") return;
+    updateSettingsTeam((team) => {
+      const validPlayerIds = [...new Set(playerIds.filter((id) => team.players.some((player) => player.id === id)))].slice(0, 5);
+      if (!validPlayerIds.length || team.fieldUnits.some((unit) => unit.name.toLocaleLowerCase("fi") === normalizedName.toLocaleLowerCase("fi"))) return team;
+      return { ...team, fieldUnits: [...team.fieldUnits, { id: `unit-${Date.now()}`, name: normalizedName, playerIds: validPlayerIds }] };
+    });
+  };
+
+  const removeFieldUnit = (fieldUnitId: string) => {
+    updateSettingsTeam((team) => ({ ...team, fieldUnits: team.fieldUnits.filter((unit) => unit.id !== fieldUnitId) }));
+  };
+
+  const updateFieldUnit = (fieldUnitId: string, name: string, playerIds: PlayerId[]) => {
+    const normalizedName = cleanName(name);
+    if (!normalizedName || settingsTeam?.sport !== "futsal") return;
+    updateSettingsTeam((team) => {
+      const validPlayerIds = [...new Set(playerIds.filter((id) => team.players.some((player) => player.id === id)))].slice(0, 5);
+      if (!validPlayerIds.length || team.fieldUnits.some((unit) => unit.id !== fieldUnitId && unit.name.toLocaleLowerCase("fi") === normalizedName.toLocaleLowerCase("fi"))) return team;
+      return { ...team, fieldUnits: team.fieldUnits.map((unit) => unit.id === fieldUnitId ? { ...unit, name: normalizedName, playerIds: validPlayerIds } : unit) };
+    });
   };
 
   const currentMatchData = (): MatchRecord => ({
@@ -424,7 +503,7 @@ export function App() {
     setMatchCreated(Boolean(restored?.teamId === nextTeam.id));
     setMatchEnded(false);
     setRunning(false);
-    setSelected(null);
+    clearPlayerSelection();
   };
 
   const saveMatch = () => {
@@ -466,7 +545,7 @@ export function App() {
     setHistoryNotice("Peli poistettu historiasta.");
   };
 
-  const exportMatch = async (match: MatchRecord, teamName = homeTeam.name) => {
+  const exportMatch = async (match: MatchRecord, teamName = homeTeam?.name || "Joukkue") => {
     try {
       const xlsx = await buildMatchXlsx(match, teamName);
       const link = document.createElement("a");
@@ -501,7 +580,7 @@ export function App() {
     setScore([0, 0]);
     setMinutes(Object.fromEntries(roster.map((player) => [player.id, 0])));
     setGoals({});
-    setSelected(null);
+    clearPlayerSelection();
     setRunning(false);
     setMatchEnded(false);
     setMatchCreated(true);
@@ -548,7 +627,7 @@ export function App() {
     setScore([0, 0]);
     setMinutes(Object.fromEntries(team.players.map((player) => [player.id, 0])));
     setGoals({});
-    setSelected(null);
+    clearPlayerSelection();
     setRunning(false);
     setMatchEnded(false);
     setMatchCreated(true);
@@ -557,7 +636,6 @@ export function App() {
     analytics.track("match_created", { source: "scheduled" });
   };
 
-  const ownScoreIndex = venue === "home" ? 0 : 1;
   const homeName = venue === "home" ? homeTeam?.name : opponent;
   const awayName = venue === "home" ? opponent : homeTeam?.name;
   const changeScore = (index: 0 | 1, amount: number) => setScore((current) => {
@@ -565,17 +643,6 @@ export function App() {
     next[index] = Math.max(0, next[index] + amount);
     return next;
   });
-  const markGoal = (playerId: PlayerId) => {
-    const next = changePlayerGoal(goals, score, playerId, ownScoreIndex, 1);
-    setGoals(next.goals);
-    setScore(next.score);
-  };
-  const removeGoal = (playerId: PlayerId) => {
-    const next = changePlayerGoal(goals, score, playerId, ownScoreIndex, -1);
-    setGoals(next.goals);
-    setScore(next.score);
-  };
-
   const saveTeamName = () => {
     updateSettingsTeam((team) => ({ ...team, name: cleanName(teamNameDraft) || team.name }));
   };
@@ -611,7 +678,7 @@ export function App() {
   const sharedExercise = window.location.hash.startsWith("#harjoite=");
 
   if (!homeTeam && !sharedExercise) {
-    return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} />;
+    return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} sport={sport} onSportChange={changeSport} />;
   }
 
   if (onboardingPlayerTeam) {
@@ -623,6 +690,11 @@ export function App() {
         onPlayerNameChange={setNewPlayerName}
         onAddPlayer={addPlayer}
         onRemovePlayer={removePlayer}
+        sport={onboardingPlayerTeam.sport}
+        fieldUnits={onboardingPlayerTeam.fieldUnits}
+        onAddFieldUnit={addFieldUnit}
+        onUpdateFieldUnit={updateFieldUnit}
+        onRemoveFieldUnit={removeFieldUnit}
         onContinue={() => {
           setNewPlayerName("");
           setOnboardingPlayerTeamId(null);
@@ -635,7 +707,7 @@ export function App() {
     return (
       <Suspense fallback={<main className="exercise-loading">Avataan harjoituseditoria…</main>}>
         <ExercisePlanner
-          team={homeTeam || { id: "shared", name: "Jaettu harjoite", players: [], formations: [], history: [] }}
+          team={homeTeam || { id: "shared", name: "Jaettu harjoite", sport: "football", players: [], formations: [], fieldUnits: [], history: [] }}
           shared={sharedExercise}
           theme={theme}
           onBack={closeExercises}
@@ -664,16 +736,18 @@ export function App() {
         onOpenGames={() => setGamesOpen(true)}
         onOpenSettings={() => { setAppSettingsReturnToTeams(false); setAppSettingsOpen(true); }}
         onOpenExercises={openExercises}
+        sport={sport}
+        onSportChange={changeSport}
       />
 
       {!matchCreated ? (
         <PregameView
           hasPlayers={roster.length > 0}
-          teamName={homeTeam.name}
+          teamName={homeTeam?.name || "Joukkue"}
           onNewMatch={openNewMatch}
           onOpenSettings={openTeamSettings}
           scheduledMatches={visibleScheduledMatches}
-          teams={teams}
+          teams={sportTeams}
           onOpenScheduledMatch={openScheduledMatch}
           onDeleteScheduledMatch={(id) => setScheduledMatches((current) => current.filter((item) => item.id !== id))}
         />
@@ -685,19 +759,21 @@ export function App() {
           formationId={formation}
           slots={slots}
           playersById={byId}
-          selected={selected}
-          selectedPlayer={selectedPlayer || null}
+          fieldUnits={homeTeam?.fieldUnits || []}
+          selectedBenchIds={selectedBenchIds}
+          selectedFieldIndexes={selectedFieldIndexes}
+          selectedPlayers={selectedPlayers}
           minutes={minutes}
-          goals={goals}
           averageSeconds={averageSeconds}
           formatTime={formatTime}
-          onSelect={setSelected}
+          onSelectBench={selectBench}
           onSelectField={selectField}
+          onSelectFieldUnit={selectFieldUnit}
+          onClearSelection={clearPlayerSelection}
           onChangeFormation={changeFormation}
-          onMarkGoal={markGoal}
-          onRemoveGoal={removeGoal}
           canResetClock={matchCreated && !matchEnded && !running && seconds > 0}
           onRequestResetClock={() => setResetClockOpen(true)}
+          sport={sport}
         />
       )}
 
@@ -709,7 +785,7 @@ export function App() {
 
       {newMatchOpen && (
         <NewMatchDialog
-          teams={teams}
+          teams={sportTeams}
           teamId={teamId}
           opponent={opponentDraft}
           venue={venueDraft}
@@ -727,13 +803,14 @@ export function App() {
           onCreate={createMatch}
           onSchedule={scheduleMatch}
           onClose={() => setNewMatchOpen(false)}
+          sport={sport}
         />
       )}
 
       {gamesOpen && (
         <GamesDialog
           matches={visibleScheduledMatches}
-          teams={teams}
+          teams={sportTeams}
           canOpen={!matchCreated || matchEnded}
           activeScheduledMatchId={activeScheduledMatchId}
           currentTeamId={teamId}
@@ -816,7 +893,7 @@ export function App() {
 
       {settingsOpen && settingsTeam && (
         <SettingsDialog
-          teams={teams}
+          teams={sportTeams}
           teamId={settingsTeam.id}
           team={settingsTeam}
           roster={settingsRoster}
@@ -843,6 +920,10 @@ export function App() {
           onAddPlayer={addPlayer}
           onRemoveFormation={removeFormation}
           onAddFormation={addFormation}
+          onAddFieldUnit={addFieldUnit}
+          onUpdateFieldUnit={updateFieldUnit}
+          onRemoveFieldUnit={removeFieldUnit}
+          sport={sport}
         />
       )}
       {appSettingsOpen && (

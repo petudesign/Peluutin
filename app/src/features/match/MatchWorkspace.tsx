@@ -1,21 +1,25 @@
 import type { CSSProperties } from "react";
-import type { Formation, FormationSlot, Player, PlayerId, SelectedPlayer } from "../../types";
+import type { FieldUnit, Formation, FormationSlot, Player, PlayerId, Sport } from "../../types";
 import { comparePlaytime, formatPitchPlayerName } from "./matchLogic";
 
 const displayRole = (role: string) => role === "VTP" ? "VKP" : role === "OTP" ? "OKP" : role;
 const mobileCurve = [-3, 3, -3];
 
-const slotStyle = (slots: FormationSlot[], slotIndex: number): CSSProperties => {
-  const [, x, y] = slots[slotIndex];
+const slotStyle = (slots: FormationSlot[], slotIndex: number, sport: Sport): CSSProperties => {
+  const [role, x, y] = slots[slotIndex];
   const row = slots
     .map((slot, index) => ({ slot, index }))
     .filter(({ slot }) => slot[2] === y);
   const rowIndex = row.findIndex(({ index }) => index === slotIndex);
   const curve = row.length === 3 ? mobileCurve[rowIndex] : 0;
+  const displayX = sport === "futsal" && row.length === 2 ? (rowIndex === 0 ? 22 : 78) : x;
+  const displayY = sport === "futsal"
+    ? role === "MV" ? 91 : 52 + ((y - 21) / 70) * 36
+    : y;
 
   return {
-    left: `${x}%`,
-    top: `calc(${y}% + var(--mobile-row-curve, 0%))`,
+    left: `${displayX}%`,
+    top: `calc(${displayY}% + var(--mobile-row-curve, 0%))`,
     "--mobile-row-curve-value": `${curve}%`,
   } as CSSProperties;
 };
@@ -27,19 +31,21 @@ interface MatchWorkspaceProps {
   formationId: string;
   slots: FormationSlot[];
   playersById: Record<PlayerId, Player>;
-  selected: SelectedPlayer | null;
-  selectedPlayer: Player | null;
+  fieldUnits: FieldUnit[];
+  selectedBenchIds: PlayerId[];
+  selectedFieldIndexes: number[];
+  selectedPlayers: Player[];
   minutes: Record<PlayerId, number>;
-  goals: Record<PlayerId, number>;
   averageSeconds: number;
   formatTime: (seconds: number) => string;
-  onSelect: (selected: SelectedPlayer | null) => void;
+  onSelectBench: (playerId: PlayerId) => void;
   onSelectField: (index: number) => void;
+  onSelectFieldUnit: (fieldUnitId: string) => void;
+  onClearSelection: () => void;
   onChangeFormation: (formationId: string) => void;
-  onMarkGoal: (playerId: PlayerId) => void;
-  onRemoveGoal: (playerId: PlayerId) => void;
   canResetClock: boolean;
   onRequestResetClock: () => void;
+  sport: Sport;
 }
 
 export function MatchWorkspace({
@@ -49,20 +55,23 @@ export function MatchWorkspace({
   formationId,
   slots,
   playersById,
-  selected,
-  selectedPlayer,
+  fieldUnits,
+  selectedBenchIds,
+  selectedFieldIndexes,
+  selectedPlayers,
   minutes,
-  goals,
   averageSeconds,
   formatTime,
-  onSelect,
+  onSelectBench,
   onSelectField,
+  onSelectFieldUnit,
+  onClearSelection,
   onChangeFormation,
-  onMarkGoal,
-  onRemoveGoal,
   canResetClock,
   onRequestResetClock,
+  sport,
 }: MatchWorkspaceProps) {
+  const benchIds = new Set(bench.map((player) => player.id));
   const playtimeIndicator = (playerId: PlayerId) => {
     const { state } = comparePlaytime(minutes[playerId] || 0, averageSeconds);
     const symbol = state === "behind" ? "↓" : state === "ahead" ? "↑" : "≈";
@@ -82,16 +91,29 @@ export function MatchWorkspace({
           <span className="count">{bench.length}</span>
         </div>
         <p className="helper">
-          {selectedPlayer ? `${selectedPlayer.name} valittu — valitse uusi paikka.` : "Valitse vaihtopelaaja ja sitten hänen uusi paikkansa."}
+          {selectedBenchIds.length
+            ? `${selectedBenchIds.length} vaihtopelaajaa valittu — valitse kentältä ${selectedBenchIds.length} poistuvaa (${selectedFieldIndexes.length}/${selectedBenchIds.length}).`
+            : "Valitse 1–5 vaihtopelaajaa ja sen jälkeen sama määrä pelaajia kentältä."}
         </p>
+        {sport === "futsal" && fieldUnits.length ? (
+          <div className="bench-field-units" aria-label="Kentälliset">
+            {fieldUnits.map((unit) => {
+              const availableCount = unit.playerIds.filter((id) => benchIds.has(id)).length;
+              return (
+                <button type="button" key={unit.id} disabled={!availableCount} onClick={() => onSelectFieldUnit(unit.id)}>
+                  <strong>{unit.name}</strong><span>{availableCount} penkillä</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         <div className="bench-list">
           {bench.map((player) => (
             <button
               key={player.id}
-              className={`bench-player ${selected?.id === player.id ? "selected" : ""}`}
-              onClick={() => onSelect(selected?.source === "bench" && selected.id === player.id
-                ? null
-                : { source: "bench", id: player.id })}
+              className={`bench-player ${selectedBenchIds.includes(player.id) ? "selected" : ""}`}
+              aria-pressed={selectedBenchIds.includes(player.id)}
+              onClick={() => onSelectBench(player.id)}
             >
               <span className="avatar">{player.number}</span>
               <span><strong>{player.name}</strong><small>Valmiina vaihtoon</small></span>
@@ -102,14 +124,14 @@ export function MatchWorkspace({
             </button>
           ))}
         </div>
-        {selected?.source === "bench" && (
+        {selectedBenchIds.length > 0 && (
           <div className="mobile-replace">
-            <div className="replace-heading"><span>Kenet vaihdetaan pois?</span><button onClick={() => onSelect(null)}>Peru</button></div>
+            <div className="replace-heading"><span>Valitse pois {selectedBenchIds.length} ({selectedFieldIndexes.length}/{selectedBenchIds.length})</span><button onClick={onClearSelection}>Peru</button></div>
             <div className="replace-grid">
               {lineup.map((id, index) => {
                 const player = playersById[id];
                 return player && (
-                  <button key={id} onClick={() => onSelectField(index)}>
+                  <button className={selectedFieldIndexes.includes(index) ? "selected" : ""} key={id} onClick={() => onSelectField(index)}>
                     <strong>{player.name}</strong>
                     <span>{playtimeIndicator(id)} {displayRole(slots[index][0])} · {formatTime(minutes[id] || 0)}</span>
                   </button>
@@ -140,13 +162,13 @@ export function MatchWorkspace({
             <button className="toolbar-reset-trigger" onClick={onRequestResetClock}>Ajan nollaus</button>
           )}
         </div>
-        <div className={`pitch ${slots.some(([, x]) => x <= 14) ? "pitch-compact-cards" : ""} ${slots.some(([, x]) => x === 11) ? "pitch-five-player-row" : ""}`}>
+        <div className={`pitch pitch-${sport} ${slots.some(([, x]) => x <= 14) ? "pitch-compact-cards" : ""} ${slots.some(([, x]) => x === 11) ? "pitch-five-player-row" : ""}`}>
           {slots.map(([role], index) => {
             const visibleRole = displayRole(role);
             const player = playersById[lineup[index]];
             if (!player) {
               return (
-                <div key={`${formationId}-${index}`} style={slotStyle(slots, index)} className="player-card empty-slot">
+                <div key={`${formationId}-${index}`} style={slotStyle(slots, index, sport)} className="player-card empty-slot">
                   <span className="role">{visibleRole}</span><strong>Tyhjä</strong>
                 </div>
               );
@@ -154,8 +176,8 @@ export function MatchWorkspace({
             return (
               <button
                 key={`${formationId}-${index}`}
-                style={slotStyle(slots, index)}
-                className={`player-card ${selected?.source === "bench" ? "allowed" : ""} ${selected?.source === "field" && selected.index === index ? "selected" : ""}`}
+                style={slotStyle(slots, index, sport)}
+                className={`player-card ${selectedBenchIds.length ? "allowed" : ""} ${selectedFieldIndexes.includes(index) ? "selected" : ""}`}
                 onClick={() => onSelectField(index)}
                 aria-label={`${player.name}, paikka ${visibleRole}`}
                 title={player.name}
@@ -175,34 +197,19 @@ export function MatchWorkspace({
 
       <aside className="side-panel details">
         <span className="eyebrow">PELAAJA</span>
-        <h2>{selectedPlayer?.name || "Valitse pelaaja"}</h2>
-        {selectedPlayer ? (
+        <h2>{selectedPlayers.length ? `${selectedPlayers.length} valittu` : "Valitse pelaaja"}</h2>
+        {selectedPlayers.length ? (
           <>
-            <div className="big-time">{formatTime(minutes[selectedPlayer.id] || 0)}</div>
-            {(() => {
-              const { state, differenceSeconds } = comparePlaytime(minutes[selectedPlayer.id] || 0, averageSeconds);
-              const label = state === "behind"
-                ? `↓ ${formatTime(Math.abs(differenceSeconds))} alle aktiivisten pelaajien keskiarvon`
-                : state === "ahead"
-                  ? `↑ ${formatTime(Math.abs(differenceSeconds))} yli aktiivisten pelaajien keskiarvon`
-                  : "≈ Lähellä aktiivisten pelaajien keskiarvoa";
-              return <p className={`playtime-comparison ${state}`}>{label}</p>;
-            })()}
-            <p className="selected-goal-count"><span aria-hidden="true">⚽</span> Maalit {goals[selectedPlayer.id] || 0}</p>
-            <div className="goal-actions">
-              <button
-                className={`goal-button ${selected?.source === "bench" ? "bench-goal-button" : ""}`}
-                onClick={() => onMarkGoal(selectedPlayer.id)}
-              >
-                Merkitse maali
-              </button>
-              {(goals[selectedPlayer.id] || 0) > 0 && (
-                <button className="secondary remove-goal-button" onClick={() => onRemoveGoal(selectedPlayer.id)}>
-                  Poista maali ({goals[selectedPlayer.id]})
-                </button>
-              )}
+            <div className="selected-player-list">
+              {selectedPlayers.map((player) => (
+                <div className="selected-player-row" key={player.id}>
+                  {playtimeIndicator(player.id)}
+                  <strong>{player.name}</strong>
+                  <span>{formatTime(minutes[player.id] || 0)}</span>
+                </div>
+              ))}
             </div>
-            <button className="secondary" onClick={() => onSelect(null)}>Peru valinta</button>
+            <button className="secondary" onClick={onClearSelection}>Peru valinta</button>
           </>
         ) : <p className="empty-copy">Valitse pelaaja nähdäksesi hänen peliaikansa ja maalinsa tai merkitäksesi uuden maalin.</p>}
       </aside>

@@ -1,6 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { changePlayerGoal, comparePlaytime, formatPitchPlayerName } from "../src/features/match/matchLogic.ts";
+import { applyBatchSubstitution, changePlayerGoal, comparePlaytime, formatPitchPlayerName } from "../src/features/match/matchLogic.ts";
+
+test("applies a batch substitution only when incoming and outgoing counts match", () => {
+  const lineup = [1, 2, 3, 4, 5];
+
+  assert.equal(applyBatchSubstitution(lineup, [6, 7], [1]), lineup);
+  assert.deepEqual(applyBatchSubstitution(lineup, [6, 7], [1, 3]), [1, 6, 3, 7, 5]);
+});
+
+test("rejects duplicate, active, invalid and oversized batch selections", () => {
+  const lineup = [1, 2, 3, 4, 5];
+
+  assert.equal(applyBatchSubstitution(lineup, [6, 6], [0, 1]), lineup);
+  assert.equal(applyBatchSubstitution(lineup, [1], [0]), lineup);
+  assert.equal(applyBatchSubstitution(lineup, [6], [9]), lineup);
+  assert.equal(applyBatchSubstitution(lineup, [6, 7, 8, 9, 10, 11], [0, 1, 2, 3, 4, 5]), lineup);
+});
 
 test("adds and removes a player goal with the own-team score", () => {
   const added = changePlayerGoal({}, [0, 0], 7, 1, 1);

@@ -1,5 +1,15 @@
 import type { PlayerId, Score } from "../../types";
 
+export function applyBatchSubstitution(lineup: PlayerId[], incoming: PlayerId[], outgoingIndexes: number[]): PlayerId[] {
+  if (!incoming.length || incoming.length > 5 || incoming.length !== outgoingIndexes.length) return lineup;
+  if (new Set(incoming).size !== incoming.length || new Set(outgoingIndexes).size !== outgoingIndexes.length) return lineup;
+  if (incoming.some((id) => lineup.includes(id)) || outgoingIndexes.some((index) => index < 0 || index >= lineup.length)) return lineup;
+
+  const next = [...lineup];
+  outgoingIndexes.forEach((index, order) => { next[index] = incoming[order]; });
+  return next;
+}
+
 export function changePlayerGoal(
   goals: Record<PlayerId, number>,
   score: Score,

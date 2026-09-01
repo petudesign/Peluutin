@@ -1,4 +1,4 @@
-import type { ActiveMatch, Formation, MatchRecord, Player, ScheduledMatch, Score, Team, TeamSize, Venue } from "./types";
+import type { ActiveMatch, FieldUnit, Formation, MatchRecord, Player, ScheduledMatch, Score, Sport, Team, TeamSize, Venue } from "./types";
 
 export const NAME_MAX_LENGTH = 60;
 export const FORMATION_MAX_LENGTH = 12;
@@ -32,6 +32,13 @@ const isMatchRecord = (value: unknown): value is MatchRecord =>
   isRecord(value) && typeof value.id === "string" && typeof value.opponent === "string"
   && Array.isArray(value.score) && Array.isArray(value.players);
 
+const parseFieldUnit = (value: unknown, playerIds: Set<Player["id"]>): FieldUnit | null => {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !Array.isArray(value.playerIds)) return null;
+  const unitPlayerIds = [...new Set(value.playerIds.filter((id): id is Player["id"] => playerIds.has(id as Player["id"])))].slice(0, 5);
+  if (!unitPlayerIds.length) return null;
+  return { id: value.id, name: cleanName(value.name) || "Kentällinen", playerIds: unitPlayerIds };
+};
+
 export function parseTeams(raw: string | null, defaultFormations: Formation[]): Team[] {
   try {
     const teams: unknown = JSON.parse(raw || "[]");
@@ -51,11 +58,17 @@ export function parseTeams(raw: string | null, defaultFormations: Formation[]): 
           })
           .slice(0, MAX_FORMATIONS)
         : [];
+      const players = value.players.map(parsePlayer).filter((player): player is Player => player !== null);
+      const playerIds = new Set(players.map((player) => player.id));
       return [{
         id: value.id,
         name: cleanName(value.name) || "Nimetön joukkue",
-        players: value.players.map(parsePlayer).filter((player): player is Player => player !== null),
+        sport: value.sport === "futsal" ? "futsal" : "football",
+        players,
         formations: formations.length ? formations : defaultFormations,
+        fieldUnits: Array.isArray(value.fieldUnits)
+          ? value.fieldUnits.map((unit) => parseFieldUnit(unit, playerIds)).filter((unit): unit is FieldUnit => unit !== null)
+          : [],
         history: Array.isArray(value.history) ? value.history.filter(isMatchRecord) : [],
       }];
     });

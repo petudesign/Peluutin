@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Check, Pencil, Settings, Trash2 } from "lucide-react";
 import { validateFormation } from "../../formation";
 import { FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "../../storage";
-import type { Formation, Player, PlayerId, Team, TeamSize } from "../../types";
+import type { Formation, Player, PlayerId, Sport, Team, TeamSize } from "../../types";
+import { FieldUnitsEditor } from "../../components/FieldUnitsEditor";
 
 interface SettingsDialogProps {
   teams: Team[];
@@ -32,6 +33,10 @@ interface SettingsDialogProps {
   onAddPlayer: () => void;
   onRemoveFormation: (id: string) => void;
   onAddFormation: () => void;
+  onAddFieldUnit: (name: string, playerIds: PlayerId[]) => void;
+  onUpdateFieldUnit: (id: string, name: string, playerIds: PlayerId[]) => void;
+  onRemoveFieldUnit: (id: string) => void;
+  sport: Sport;
 }
 
 export function SettingsDialog(props: SettingsDialogProps) {
@@ -43,7 +48,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
     onTeamNameDraftChange, onNewTeamNameChange, onNewPlayerNameChange,
     onNewFormationNameChange, onNewFormationTeamSizeChange, onAddTeam, onSaveTeamName, onRequestDeleteTeam,
     onUpdatePlayerNumber, onUpdatePlayerName, onRemovePlayer, onAddPlayer,
-    onRemoveFormation, onAddFormation,
+    onRemoveFormation, onAddFormation, onAddFieldUnit, onUpdateFieldUnit, onRemoveFieldUnit, sport,
   } = props;
   const visibleFormations = formations.filter((item) => item.teamSize === newFormationTeamSize);
   const formationLimitReached = visibleFormations.length >= MAX_FORMATIONS_PER_TEAM_SIZE;
@@ -186,8 +191,10 @@ export function SettingsDialog(props: SettingsDialogProps) {
                   }}
                 >
                   <option value="5">5v5</option>
-                  <option value="8">8v8</option>
-                  <option value="11">11v11</option>
+                  {sport === "football" && <>
+                    <option value="8">8v8</option>
+                    <option value="11">11v11</option>
+                  </>}
                 </select>
                 <input
                   maxLength={FORMATION_MAX_LENGTH}
@@ -212,6 +219,10 @@ export function SettingsDialog(props: SettingsDialogProps) {
               )}
               {formationError && <p id="formation-error" className="field-error" role="alert">{formationError}</p>}
             </section>
+
+            {sport === "futsal" ? (
+              <FieldUnitsEditor players={roster} fieldUnits={team.fieldUnits} onAdd={onAddFieldUnit} onUpdate={onUpdateFieldUnit} onRemove={onRemoveFieldUnit} />
+            ) : null}
 
           </div>
         </div>

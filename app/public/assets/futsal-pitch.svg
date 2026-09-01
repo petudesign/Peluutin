@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Futsalkenttä">
+  <rect width="600" height="800" rx="8" fill="#ef3035"/>
+  <rect x="28" y="30" width="544" height="740" rx="3" fill="#0b7fbd"/>
+
+  <g fill="none" stroke="#f8fafc" stroke-width="3" opacity=".97">
+    <rect x="28" y="30" width="544" height="740" rx="3"/>
+    <path d="M28 400h544"/>
+    <circle cx="300" cy="400" r="62"/>
+
+    <!-- Leveät ja matalat maalialueet päädyissä -->
+    <path d="M100 30C100 180 500 180 500 30"/>
+    <path d="M100 770C100 620 500 620 500 770"/>
+
+    <!-- Kulmakaaret -->
+    <path d="M28 42A12 12 0 0 0 40 30M560 30A12 12 0 0 0 572 42M572 758A12 12 0 0 0 560 770M40 770A12 12 0 0 0 28 758"/>
+
+    <!-- Vaihtoalueen merkit vasemmalla punaisella reunalla -->
+    <path d="M8 215h20M8 308h20M8 492h20M8 585h20"/>
+
+    <!-- Päätyviivojen merkit maalien vieressä -->
+    <path d="M164 10v20M436 10v20M164 770v20M436 770v20"/>
+
+    <!-- Valkoiset maalikehykset päätyviivojen ulkopuolella -->
+    <path d="M240 30V8h120v22M240 770v22h120v-22"/>
+
+    <!-- Lyhyet merkkiviivat maalien keskilinjalla -->
+    <path d="M286 123h28M286 677h28"/>
+  </g>
+
+  <g fill="#f8fafc">
+    <circle cx="300" cy="400" r="4"/>
+    <circle cx="300" cy="142" r="5"/>
+    <circle cx="300" cy="215" r="5"/>
+    <circle cx="164" cy="215" r="3"/>
+    <circle cx="436" cy="215" r="3"/>
+    <circle cx="300" cy="658" r="5"/>
+    <circle cx="300" cy="585" r="5"/>
+    <circle cx="164" cy="585" r="3"/>
+    <circle cx="436" cy="585" r="3"/>
+  </g>
+</svg>

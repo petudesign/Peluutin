@@ -1,4 +1,5 @@
 export type PlayerId = string | number;
+export type Sport = "football" | "futsal";
 export type Venue = "home" | "away";
 export type Score = [number, number];
 export type FormationSlot = readonly [role: string, x: number, y: number];
@@ -8,6 +9,12 @@ export interface Player {
   id: PlayerId;
   name: string;
   number: number;
+}
+
+export interface FieldUnit {
+  id: string;
+  name: string;
+  playerIds: PlayerId[];
 }
 
 export interface Formation {
@@ -36,8 +43,10 @@ export interface MatchRecord {
 export interface Team {
   id: string;
   name: string;
+  sport: Sport;
   players: Player[];
   formations: Formation[];
+  fieldUnits: FieldUnit[];
   history: MatchRecord[];
 }
 

@@ -1,7 +1,8 @@
 import { Trash2 } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { NAME_MAX_LENGTH } from "../storage";
-import type { Player, PlayerId } from "../types";
+import type { FieldUnit, Player, PlayerId, Sport } from "../types";
+import { FieldUnitsEditor } from "./FieldUnitsEditor";
 
 interface PlayerOnboardingProps {
   teamName: string;
@@ -10,6 +11,11 @@ interface PlayerOnboardingProps {
   onPlayerNameChange: (name: string) => void;
   onAddPlayer: () => void;
   onRemovePlayer: (id: PlayerId) => void;
+  sport: Sport;
+  fieldUnits: FieldUnit[];
+  onAddFieldUnit: (name: string, playerIds: PlayerId[]) => void;
+  onUpdateFieldUnit: (id: string, name: string, playerIds: PlayerId[]) => void;
+  onRemoveFieldUnit: (id: string) => void;
   onContinue: () => void;
 }
 
@@ -20,6 +26,11 @@ export function PlayerOnboarding({
   onPlayerNameChange,
   onAddPlayer,
   onRemovePlayer,
+  sport,
+  fieldUnits,
+  onAddFieldUnit,
+  onUpdateFieldUnit,
+  onRemoveFieldUnit,
   onContinue,
 }: PlayerOnboardingProps) {
   const addPlayer = (event: FormEvent<HTMLFormElement>) => {
@@ -77,6 +88,10 @@ export function PlayerOnboarding({
             <p className="onboarding-roster-empty">Ei pelaajia vielä. Lisää ensimmäinen pelaaja yllä.</p>
           )}
         </section>
+
+        {sport === "futsal" ? (
+          <FieldUnitsEditor players={players} fieldUnits={fieldUnits} onAdd={onAddFieldUnit} onUpdate={onUpdateFieldUnit} onRemove={onRemoveFieldUnit} />
+        ) : null}
 
         <button className={`onboarding-continue ${players.length ? "" : "onboarding-skip"}`} type="button" onClick={onContinue}>
           {players.length ? "Jatka Peluuttimeen" : "Ohita toistaiseksi"}
