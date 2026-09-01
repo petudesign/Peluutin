@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Circle, CircleDot, CirclePlus, Eraser, Eye, EyeOff, Footprints, Goal, Minus, Moon, MousePointer2, PanelLeft, PanelRight, Pause, Pencil, PersonStanding, Play, Redo2, Route, Share2, Shapes, Square, StickyNote, Sun, TrafficCone, Trash2, Type, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookmarkPlus, Circle, CircleDot, CirclePlus, Copy, Eraser, Eye, EyeOff, Footprints, FolderOpen, Goal, Minus, Moon, MousePointer2, PanelLeft, PanelRight, Pause, Pencil, PersonStanding, Play, Redo2, Route, Share2, Shapes, Square, StickyNote, Sun, TrafficCone, Trash2, Type, UserRoundPlus, X } from "lucide-react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import type { Team } from "../../types";
 import { ExerciseCanvas } from "./ExerciseCanvas";
+import { EXERCISE_DRAFT_STORAGE_KEY, loadSavedExercises, saveSavedExercises, writeStoredExerciseDraft, type SavedExercise } from "./exerciseStorage";
 import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_MIN_DURATION_MS, EXERCISE_NATURAL_SPEEDS, formatRouteCount, getExerciseMarkerColor, getExercisePathNaturalDurationMs, getNextExercisePathStartMs, isExerciseBallPath, isExercisePathValid, keepSingleBall, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs, type ExerciseAnnotation, type ExerciseDraft, type ExerciseGoalSize, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExercisePlayerRole, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
 
 interface ExercisePlannerProps { team: Team; theme: "light" | "dark"; shared?: boolean; onBack: () => void; onToggleTheme: () => void; }
 type ToolMenu = "player" | "element" | "pitch" | "route" | "shape" | null;
 
-const STORAGE_KEY = "peluutin-exercise-draft-v1";
 const TOOL_SIDE_KEY = "peluutin-exercise-tool-side";
 const HIDE_NAMES_KEY = "peluutin-exercise-hide-names";
 const DRAW_TOOLS: ExerciseTool[] = ["draw", "line", "rectangle", "circle"];
@@ -96,7 +96,7 @@ function seedDraft(team: Team): ExerciseDraft {
 
 function loadDraft(team: Team): ExerciseDraft {
   try {
-    const stored = localStorage.getItem(`${STORAGE_KEY}-${team.id}`);
+    const stored = localStorage.getItem(`${EXERCISE_DRAFT_STORAGE_KEY}-${team.id}`);
     if (!stored) return seedDraft(team);
     const draft = JSON.parse(stored) as Partial<ExerciseDraft>;
     if (!Array.isArray(draft.markers) || !Array.isArray(draft.paths)) return seedDraft(team);
@@ -137,7 +137,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   const [playbackStartedAt, setPlaybackStartedAt] = useState(0);
   const [playbackElapsedMs, setPlaybackElapsedMs] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 1.5 | 2>(1);
-  const [saveLabel, setSaveLabel] = useState("Tallennettu");
+  const [saveLabel, setSaveLabel] = useState("");
   const [shareLabel, setShareLabel] = useState("Jaa");
   const [drawingId, setDrawingId] = useState<string | null>(null);
   const [ink, setInk] = useState("#f6b323");
@@ -156,6 +156,9 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   const [timelineTrim, setTimelineTrim] = useState<{ pathId: string; pointerX: number; initialDurationMs: number } | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
   const [clearRoutesOpen, setClearRoutesOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [savedExercises, setSavedExercises] = useState<SavedExercise[]>(() => loadSavedExercises().filter(item => item.teamId === team.id));
+  const [savedExerciseId, setSavedExerciseId] = useState<string | null>(null);
 
   const selected = useMemo(() => selectedIds.length === 1 ? draft.markers.find(marker => marker.id === selectedId) || null : null, [draft.markers, selectedId, selectedIds.length]);
   const selectedAnnotation = useMemo(() => draft.annotations.find(annotation => annotation.id === selectedAnnotationId) || null, [draft.annotations, selectedAnnotationId]);
@@ -301,10 +304,15 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   }, [timeline.totalMs]);
 
   useEffect(() => {
+    setSavedExercises(loadSavedExercises().filter(item => item.teamId === team.id));
+    setSavedExerciseId(null);
+  }, [team.id]);
+
+  useEffect(() => {
     if (shared) return;
     setSaveLabel("Tallennetaan…");
     const timer = window.setTimeout(() => {
-      localStorage.setItem(`${STORAGE_KEY}-${team.id}`, JSON.stringify({ ...draft, updatedAt: new Date().toISOString() }));
+      writeStoredExerciseDraft(team.id, { ...draft, updatedAt: new Date().toISOString() });
       setSaveLabel("Tallennettu");
     }, 350);
     return () => window.clearTimeout(timer);
@@ -317,8 +325,57 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
     window.setTimeout(() => setShareLabel("Jaa"), 1800);
   };
 
+  const saveExercise = () => {
+    const now = new Date().toISOString();
+    const snapshot = { ...draft, updatedAt: now };
+    const existing = savedExerciseId ? savedExercises.find(item => item.id === savedExerciseId) : undefined;
+    const entry: SavedExercise = existing
+      ? { ...existing, name: snapshot.name, draft: snapshot, updatedAt: now }
+      : { id: `exercise-${Date.now()}`, teamId: team.id, name: snapshot.name, draft: snapshot, createdAt: now, updatedAt: now };
+    const next = existing ? savedExercises.map(item => item.id === entry.id ? entry : item) : [entry, ...savedExercises];
+    saveSavedExercises(next);
+    setSavedExercises(next);
+    setSavedExerciseId(entry.id);
+    setDraft(snapshot);
+    setSaveLabel("Tallennettu");
+  };
+
+  const openSavedExercise = (item: SavedExercise) => {
+    setDraft(item.draft);
+    setSavedExerciseId(item.id);
+    setLibraryOpen(false);
+    clearSelection();
+    setPlaying(false);
+    setPlaybackElapsedMs(0);
+  };
+
+  const useSavedAsTemplate = (item: SavedExercise) => {
+    const now = new Date().toISOString();
+    setDraft({ ...item.draft, name: `${item.name} – kopio`, updatedAt: now });
+    setSavedExerciseId(null);
+    setLibraryOpen(false);
+    clearSelection();
+    setPlaying(false);
+    setPlaybackElapsedMs(0);
+  };
+
+  const removeSavedExercise = (item: SavedExercise) => {
+    if (!window.confirm(`Poistetaanko harjoite “${item.name}”?`)) return;
+    const next = savedExercises.filter(saved => saved.id !== item.id);
+    saveSavedExercises(next);
+    setSavedExercises(next);
+    if (savedExerciseId === item.id) setSavedExerciseId(null);
+  };
+
   const armTool = (nextTool: ExerciseTool) => { setPathError(""); setOpenMenu(null); setTool(nextTool); };
-  const toggleMenu = (menu: Exclude<ToolMenu, null>) => { setPathError(""); setOpenMenu(current => current === menu ? null : menu); };
+  const toggleMenu = (menu: Exclude<ToolMenu, null>) => {
+    setPathError("");
+    const opening = openMenu !== menu;
+    setOpenMenu(opening ? menu : null);
+    if (menu === "player") setTool(opening ? (playerTeam === "red" ? "player-red" : "player-blue") : "select");
+    else if (opening && (tool === "player-blue" || tool === "player-red")) setTool("select");
+  };
+  const setPlayerTeamAndArm = (nextTeam: "blue" | "red") => { setPlayerTeam(nextTeam); setTool(nextTeam === "red" ? "player-red" : "player-blue"); };
 
   const addMarker = (kind: ExerciseTool, x: number, z: number) => {
     const teamColor = kind === "player-red" ? "red" : "blue";
@@ -342,7 +399,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
           ? { id, kind: "dummy", name: "Harjoitusnukke", x, z, rotation: 0 }
           : { id, kind: "player", team: teamColor, role: "midfielder", color: playerColor, name: `Pelaaja ${count}`, number: count, x, z };
     updateDraft(current => ({ ...current, markers: [...current.markers, marker] }));
-    clearSelection(); setSelectedId(id); setTool("select");
+    clearSelection(); setSelectedId(id); setTool(kind === "player-blue" || kind === "player-red" ? kind : "select");
   };
 
   const selectMarker = (id: string | null, additive = false) => {
@@ -495,25 +552,26 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   };
   const undoKeys = <><kbd>Ctrl</kbd><span className="exercise-key-or">/</span><kbd>⌘ Cmd</kbd><span>+</span><kbd>Z</kbd></>;
   const toolHint = tool === "pass" ? (selectedId ? "Valitse syötön vastaanottaja" : "Valitse ensin lähtöpiste") : tool === "run" ? (selectedId ? "Valitse pelaaja, pallo tai vapaa kenttäkohta" : "Valitse ensin lähtöpiste") : tool === "dribble" ? (selectedId ? "Valitse kuljetuksen kohde tai vapaa kenttäkohta" : "Valitse ensin pallollinen pelaaja") : tool === "shot" ? (selectedId ? "Valitse maali tai vapaa kenttäkohta" : "Valitse ensin laukoja") : tool === "player-blue" || tool === "player-red" ? "Napsauta kenttää lisätäksesi pelaajan" : tool === "ball" ? "Napsauta kenttää lisätäksesi pallon" : tool === "cone" ? "Napsauta kenttää lisätäksesi tötsän" : tool === "tall-cone" ? "Napsauta kenttää lisätäksesi kartion" : tool === "bench" ? "Napsauta kenttää lisätäksesi penkin" : tool === "ladder" ? "Napsauta kenttää lisätäksesi tikkaat" : tool === "dummy" ? "Napsauta kenttää lisätäksesi harjoitusnuken" : tool.startsWith("goal-") ? "Napsauta kenttää lisätäksesi maalin" : tool === "text" ? "Napsauta kenttää ja kirjoita" : DRAW_TOOLS.includes(tool) ? "Piirrä kentälle raahaamalla" : null;
-  const hint = pathError || toolHint || (view === "3d" ? <><kbd className="exercise-shift-key"><span aria-hidden="true">⇧</span><span>Shift</span></kbd><span>+ raahaus liikuttaa näkymää</span><span className="exercise-hint-divider">·</span><span>rulla zoomaa</span><span className="exercise-hint-divider">·</span>{undoKeys}<span>kumoaa viimeisimmän toiminnon</span></> : <><span>Raahaa pelaajia</span><span className="exercise-hint-divider">·</span><kbd className="exercise-shift-key"><span aria-hidden="true">⇧</span><span>Shift</span></kbd><span>+ raahaus siirtää kenttää</span><span className="exercise-hint-divider">·</span><span>rulla zoomaa</span><span className="exercise-hint-divider">·</span>{undoKeys}<span>kumoaa viimeisimmän toiminnon</span></>);
+  const hint = pathError || toolHint || (view === "3d" ? <><span>Raahaa pelaajia</span><span className="exercise-hint-divider">·</span><kbd className="exercise-shift-key"><span aria-hidden="true">⇧</span><span>Shift</span></kbd><span>+ raahaus siirtää kenttää</span><span className="exercise-hint-divider">·</span><span>rulla zoomaa</span><span className="exercise-hint-divider">·</span>{undoKeys}<span>kumoaa viimeisimmän toiminnon</span></> : <><span>Raahaa pelaajia</span><span className="exercise-hint-divider">·</span><kbd className="exercise-shift-key"><span aria-hidden="true">⇧</span><span>Shift</span></kbd><span>+ raahaus siirtää kenttää</span><span className="exercise-hint-divider">·</span><span>rulla zoomaa</span><span className="exercise-hint-divider">·</span>{undoKeys}<span>kumoaa viimeisimmän toiminnon</span></>);
 
   const inspectorOpen = !openMenu && (selectedIds.length > 1 || selected || selectedPath || (selectedAnnotation && selectedAnnotation.kind !== "text"));
 
   if (shared) return <main className="exercise-shell"><section className={`exercise-desktop-app exercise-shared exercise-shared-${view} ${playing ? "exercise-playing" : ""}`}>
-    <header className="exercise-header"><div className="exercise-header-inner"><button className="exercise-icon-button exercise-back-left" onClick={onBack} title="Peluutin-etusivulle"><ArrowLeft size={18} /></button><button className="exercise-brand" onClick={onBack}><img src="/favicon.svg" alt="" /><span className="exercise-brand-lockup"><b>Peluutin</b><small>Jaettu harjoite</small></span></button><span className="exercise-divider" /><strong className="exercise-shared-title">{draft.name}</strong><div className="exercise-header-actions"><div className="exercise-view-switch"><button className={view === "2d" ? "active" : ""} onClick={() => setView("2d")}>2D</button><button className={view === "3d" ? "active" : ""} onClick={() => setView("3d")}>3D</button></div><button className={`exercise-icon-button ${hideNames ? "active" : ""}`} onClick={() => setHideNames(current => !current)}>{hideNames ? <EyeOff size={18} /> : <Eye size={18} />}</button><button className="exercise-icon-button" onClick={onToggleTheme}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div></div></header>
+    <header className="exercise-header"><div className="exercise-header-inner"><button className="exercise-icon-button exercise-back-left" onClick={onBack} title="Peluutin-etusivulle"><ArrowLeft size={18} /></button><button className="exercise-brand" onClick={onBack}><img src="/favicon.svg" alt="" /><span className="exercise-brand-lockup"><b>Peluutin</b><small>Jaettu harjoite</small></span></button><span className="exercise-divider" /><strong className="exercise-shared-title">{draft.name}</strong><div className="exercise-header-actions"><div className={`exercise-view-switch ${view === "3d" ? "is-3d" : ""}`}><span className="exercise-view-switch-thumb" aria-hidden="true" /><button className={view === "2d" ? "active" : ""} onClick={() => setView("2d")}>2D</button><button className={view === "3d" ? "active" : ""} onClick={() => setView("3d")}>3D</button></div><button className={`exercise-icon-button ${hideNames ? "active" : ""}`} onClick={() => setHideNames(current => !current)}>{hideNames ? <EyeOff size={18} /> : <Eye size={18} />}</button><button className="exercise-icon-button" onClick={onToggleTheme}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div></div></header>
     <section className="exercise-stage"><ExerciseCanvas theme={theme} view={view} tool="pass" markers={draft.markers} paths={draft.paths} annotations={draft.annotations} goalSize={draft.goalSize} pitchPreset={draft.pitchPreset} pitchOrientation="portrait" pitchStyle={draft.pitchStyle} zoomScale={view === "2d" ? 1.12 : 1} labelScale={1.2} showResetAtDefault={false} showNames={!hideNames} selectedIds={[]} selectedAnnotationId={null} selectedPathId={null} editingTextId={null} playbackPositionMs={playbackPositionMs} showPlaybackFrame={playing || playbackElapsedMs > 0} onSelect={() => {}} onBoxSelect={() => {}} onSelectAnnotation={() => {}} onSelectPath={() => {}} onChangeText={() => {}} onFinishTextEdit={() => {}} onMove={() => {}} onPitchPointer={() => {}} onEraseAnnotation={() => {}} />{draft.notes && notesOpen && <div className="exercise-shared-notes">{draft.notes}</div>}</section>
     {draft.notes && <button className={`exercise-shared-notes-toggle ${notesOpen ? "active" : ""}`} onClick={() => setNotesOpen(current => !current)} title={notesOpen ? "Piilota kommentti" : "Avaa kommentti"} aria-label={notesOpen ? "Piilota kommentti" : "Avaa kommentti"} aria-pressed={notesOpen}><StickyNote size={17} /></button>}
-    <div className="exercise-playback-stack"><div className="exercise-playback"><button className={playing ? "active" : ""} onClick={togglePlayback}>{playing ? <Pause size={16} /> : <Play size={16} />} {playing ? "Pysäytä" : "Toista"}</button><div className="exercise-speed-switch">{([1, 1.5, 2] as const).map(speed => <button key={speed} className={playbackSpeed === speed ? "active" : ""} onClick={() => { setPlaying(false); setPlaybackSpeed(speed); }}>{speed}×</button>)}</div></div></div>
+    <div className="exercise-playback-stack"><div className="exercise-playback"><button className={playing ? "active" : ""} onClick={togglePlayback}>{playing ? <Pause size={16} /> : <Play size={16} />} {playing ? "Pysäytä" : "Toista"}</button><div className={`exercise-speed-switch speed-${playbackSpeed === 1 ? "1" : playbackSpeed === 1.5 ? "1-5" : "2"}`}><span className="exercise-speed-switch-thumb" aria-hidden="true" />{([1, 1.5, 2] as const).map(speed => <button key={speed} className={playbackSpeed === speed ? "active" : ""} onClick={() => { setPlaying(false); setPlaybackSpeed(speed); }}>{speed}×</button>)}</div></div></div>
   </section></main>;
 
   return <main className="exercise-shell">
     <div className="exercise-mobile-block"><img src="/assets/peluutin-logo.svg" alt="Peluutin" /><h1>Harjoitteet tarvitsee leveämmän näkymän</h1><p><strong>Käytätkö tablettia?</strong> Käännä se vaaka-asentoon, niin voit avata harjoituseditorin. Harjoitteita ei ole suunniteltu puhelimella käytettäväksi.</p><button onClick={onBack}>Takaisin otteluihin</button></div>
     <section className={`exercise-desktop-app exercise-tools-${toolSide}`}>
-      <header className="exercise-header"><div className="exercise-header-inner"><button className="exercise-icon-button exercise-back-left" onClick={onBack} title="Takaisin otteluihin"><ArrowLeft size={18} /></button><button className="exercise-brand" onClick={onBack} aria-label="Peluutin Ottelut -näkymään"><img src="/favicon.svg" alt="" /><span className="exercise-brand-lockup"><b>Peluutin</b><small>Harjoitteet</small></span></button><span className="exercise-divider" /><label className="exercise-title-editor"><input className="exercise-title-input" size={Math.max(12, Math.min(32, draft.name.length + 1))} value={draft.name} onChange={event => updateDraft(current => ({ ...current, name: event.target.value.slice(0, 60) }))} aria-label="Harjoitteen nimi" /><Pencil size={14} aria-hidden="true" /></label><div className="exercise-header-actions"><span className="exercise-save-state">{saveLabel}</span><div className="exercise-view-switch"><button className={view === "2d" ? "active" : ""} onClick={() => setView("2d")}>2D</button><button className={view === "3d" ? "active" : ""} onClick={() => setView("3d")}>3D</button></div><button className={`exercise-icon-button ${hideNames ? "active" : ""}`} onClick={() => setHideNames(current => { const next = !current; localStorage.setItem(HIDE_NAMES_KEY, String(next)); return next; })} title={hideNames ? "Näytä nimet" : "Piilota nimet"} aria-label={hideNames ? "Näytä nimet" : "Piilota nimet"} aria-pressed={hideNames}>{hideNames ? <EyeOff size={18} /> : <Eye size={18} />}</button><button className="exercise-icon-button" onClick={onToggleTheme} title={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"} aria-label={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div></div></header>
+      <header className="exercise-header"><div className="exercise-header-inner"><button className="exercise-icon-button exercise-back-left" onClick={onBack} title="Takaisin otteluihin"><ArrowLeft size={18} /></button><button className="exercise-brand" onClick={onBack} aria-label="Peluutin Ottelut -näkymään"><img src="/favicon.svg" alt="" /><span className="exercise-brand-lockup"><b>Peluutin</b><small>Harjoitteet</small></span></button><span className="exercise-divider" /><label className="exercise-title-editor"><input className="exercise-title-input" size={Math.max(12, Math.min(32, draft.name.length + 1))} value={draft.name} onChange={event => updateDraft(current => ({ ...current, name: event.target.value.slice(0, 60) }))} aria-label="Harjoitteen nimi" /><Pencil size={14} aria-hidden="true" /></label><div className="exercise-title-actions"><button className="exercise-save-trigger" onClick={saveExercise}><BookmarkPlus size={15} />{saveLabel === "Tallennettu" ? "Tallennettu" : "Tallenna"}</button><button className="exercise-icon-button" onClick={() => setLibraryOpen(true)} title="Tallennetut harjoitteet" aria-label="Tallennetut harjoitteet"><FolderOpen size={18} /></button></div><div className="exercise-header-actions"><div className={`exercise-view-switch ${view === "3d" ? "is-3d" : ""}`}><span className="exercise-view-switch-thumb" aria-hidden="true" /><button className={view === "2d" ? "active" : ""} onClick={() => setView("2d")}>2D</button><button className={view === "3d" ? "active" : ""} onClick={() => setView("3d")}>3D</button></div><button className={`exercise-icon-button ${hideNames ? "active" : ""}`} onClick={() => setHideNames(current => { const next = !current; localStorage.setItem(HIDE_NAMES_KEY, String(next)); return next; })} title={hideNames ? "Näytä nimet" : "Piilota nimet"} aria-label={hideNames ? "Näytä nimet" : "Piilota nimet"} aria-pressed={hideNames}>{hideNames ? <EyeOff size={18} /> : <Eye size={18} />}</button><button className="exercise-icon-button" onClick={onToggleTheme} title={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"} aria-label={theme === "dark" ? "Vaihda vaaleaan teemaan" : "Vaihda tummaan teemaan"}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div></div></header>
 
       <section className={`exercise-stage ${routesOpen ? "timeline-open" : ""}`}><ExerciseCanvas theme={theme} view={view} tool={tool} markers={draft.markers} paths={draft.paths} annotations={draft.annotations} goalSize={draft.goalSize} pitchPreset={draft.pitchPreset} pitchOrientation={draft.pitchOrientation} pitchStyle={draft.pitchStyle} showNames={!hideNames} selectedIds={selectedIds} selectedAnnotationId={selectedAnnotationId} selectedPathId={selectedPathId} editingTextId={editingTextId} playbackPositionMs={playbackPositionMs} showPlaybackFrame={playing || scrubbing || playbackElapsedMs > 0} onSelect={selectMarker} onBoxSelect={selectMarkerBox} onSelectAnnotation={selectAnnotation} onSelectPath={selectPath} onChangeText={(id, text) => updateDraft(current => ({ ...current, annotations: current.annotations.map(annotation => annotation.id === id ? { ...annotation, text } : annotation) }))} onFinishTextEdit={finishTextEdit} onMove={(id, x, z) => updateDraft(current => ({ ...current, markers: moveExerciseMarkerSelection(current.markers, selectedIds.includes(id) ? selectedIds : [id], id, x, z, current.pitchPreset) }))} onPitchPointer={pitchPointer} onEraseAnnotation={id => updateDraft(current => ({ ...current, annotations: current.annotations.filter(annotation => annotation.id !== id) }))} /><div className="exercise-stage-hint">{hint}</div></section>
 
       <button className={`exercise-share-trigger ${shareLabel === "Jaa" ? "" : "is-copied"}`} onClick={shareExercise}><Share2 size={16} />{shareLabel}</button>
+      {libraryOpen && <div className="exercise-library-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setLibraryOpen(false)}><section className="exercise-library-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-library-title"><header><div><span className="eyebrow">HARJOITTEET</span><h2 id="exercise-library-title">Tallennetut harjoitteet</h2></div><button className="exercise-icon-button" onClick={() => setLibraryOpen(false)} aria-label="Sulje"><X size={18} /></button></header>{savedExercises.length ? <div className="exercise-library-list">{savedExercises.map(item => <article key={item.id}><div><strong>{item.name}</strong><small>Muokattu {new Date(item.updatedAt).toLocaleDateString("fi-FI")}</small></div><div className="exercise-library-actions"><button className="button-primary" onClick={() => openSavedExercise(item)}>Avaa</button><button className="button-secondary" onClick={() => useSavedAsTemplate(item)}><Copy size={14} />Käytä mallina</button><button className="exercise-library-delete" onClick={() => removeSavedExercise(item)} aria-label={`Poista harjoite ${item.name}`}><Trash2 size={15} /></button></div></article>)}</div> : <p className="exercise-library-empty">Et ole vielä tallentanut harjoitteita. Tallenna nykyinen harjoite, niin voit käyttää sitä myöhemmin mallina.</p>}</section></div>}
       <aside className="exercise-tools" aria-label="Harjoitteen työkalut">
         <button className={tool === "select" && !openMenu ? "active" : ""} onClick={() => { armTool("select"); clearSelection(); }} title="Valitse ja siirrä" aria-label="Valitse ja siirrä"><MousePointer2 size={19} /></button>
         <button className={openMenu === "player" || tool === "player-blue" || tool === "player-red" ? "active" : ""} onClick={() => toggleMenu("player")} title="Lisää pelaaja" aria-label="Lisää pelaaja"><UserRoundPlus size={19} /></button>
@@ -527,7 +585,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
         <button className="tool-break" onClick={() => setToolSide(current => { const next = current === "right" ? "left" : "right"; localStorage.setItem(TOOL_SIDE_KEY, next); return next; })} title={`Siirrä työkalut ${toolSide === "right" ? "vasemmalle" : "oikealle"}`} aria-label={`Siirrä työkalut ${toolSide === "right" ? "vasemmalle" : "oikealle"}`}>{toolSide === "right" ? <PanelLeft size={19} /> : <PanelRight size={19} />}</button>
       </aside>
 
-      {openMenu === "player" && <aside className="exercise-tool-popover" aria-label="Pelaajan asetukset"><div className="exercise-popover-title"><span>Lisää pelaaja</span><button onClick={() => setOpenMenu(null)} aria-label="Sulje"><X size={16} /></button></div><fieldset><legend>Rooli harjoitteessa</legend><div className="exercise-option-row"><button className={playerTeam === "blue" ? "active" : ""} onClick={() => setPlayerTeam("blue")}><span className="exercise-team-dot own" />Oma joukkue</button><button className={playerTeam === "red" ? "active" : ""} onClick={() => setPlayerTeam("red")}><span className="exercise-team-dot opponent" />Vastustaja</button></div></fieldset><fieldset><legend>Väri</legend><div className="exercise-color-row">{DRAW_COLORS.map(color => <button key={color} className={`${playerColor === color ? "active" : ""} ${color === "#ffffff" ? "light-swatch" : ""}`} style={{ backgroundColor: color }} onClick={() => setPlayerColor(color)} aria-label={`Valitse pelaajan väri ${color}`} />)}</div></fieldset><button className="exercise-popover-primary" disabled={teamLimit} onClick={() => armTool(playerTeam === "red" ? "player-red" : "player-blue")}>{teamLimit ? "11 pelaajan raja täynnä" : "Lisää kentälle"}</button></aside>}
+      {openMenu === "player" && <aside className="exercise-tool-popover" aria-label="Pelaajan asetukset"><div className="exercise-popover-title"><span>Lisää pelaaja</span><button onClick={() => { setOpenMenu(null); setTool("select"); }} aria-label="Sulje"><X size={16} /></button></div><fieldset><legend>Rooli harjoitteessa</legend><div className="exercise-option-row"><button className={playerTeam === "blue" ? "active" : ""} onClick={() => setPlayerTeamAndArm("blue")}><span className="exercise-team-dot own" />Oma joukkue</button><button className={playerTeam === "red" ? "active" : ""} onClick={() => setPlayerTeamAndArm("red")}><span className="exercise-team-dot opponent" />Vastustaja</button></div></fieldset><fieldset><legend>Väri</legend><div className="exercise-color-row">{DRAW_COLORS.map(color => <button key={color} className={`${playerColor === color ? "active" : ""} ${color === "#ffffff" ? "light-swatch" : ""}`} style={{ backgroundColor: color }} onClick={() => setPlayerColor(color)} aria-label={`Valitse pelaajan väri ${color}`} />)}</div></fieldset><p className="exercise-popover-copy exercise-player-add-hint">{teamLimit ? "11 pelaajan raja täynnä" : "Napsauta kenttää lisätäksesi pelaajan"}</p></aside>}
       {openMenu === "element" && <aside className="exercise-tool-popover" aria-label="Lisää elementtejä"><div className="exercise-popover-title"><span>Lisää elementtejä</span><button onClick={() => setOpenMenu(null)} aria-label="Sulje"><X size={16} /></button></div><div className="exercise-element-grid"><button onClick={() => armTool("ball")}><CircleDot size={18} /><span><b>Pallo</b><small>Lisää kentälle</small></span></button><button onClick={() => armTool("cone")}><Circle size={18} /><span><b>Tötsä</b><small>Matala merkki</small></span></button><button onClick={() => armTool("tall-cone")}><TrafficCone size={18} /><span><b>Kartio</b><small>Korkea kartio</small></span></button><button onClick={() => armTool("bench")}><Minus size={18} /><span><b>Penkki</b><small>Pitkä ja matala</small></span></button><button onClick={() => armTool("ladder")}><Shapes size={18} /><span><b>Tikkaat</b><small>Maahan asetettavat</small></span></button><button onClick={() => armTool("dummy")}><PersonStanding size={18} /><span><b>Harjoitusnukke</b><small>Muuri ja vastus</small></span></button></div><fieldset><legend>Lisää maali</legend><div className="exercise-goal-size-options">{([['small', 'Pieni'], ['youth', 'Juniori'], ['full', 'Iso']] as Array<[ExerciseGoalSize, string]>).map(([value, label]) => <button key={value} onClick={() => armTool(`goal-${value}` as ExerciseTool)}><Goal size={16} />{label}</button>)}</div></fieldset></aside>}
 
       {openMenu === "pitch" && <aside className="exercise-tool-popover" aria-label="Kentän ja maalien asetukset"><div className="exercise-popover-title"><span>Kenttä ja maalit</span><button onClick={() => setOpenMenu(null)} aria-label="Sulje"><X size={16} /></button></div><fieldset><legend>Tyyli</legend><div className="exercise-option-row">{([['dark', 'Tumma'], ['grass', 'Nurmi']] as Array<[ExercisePitchStyle, string]>).map(([value, label]) => <button key={value} className={draft.pitchStyle === value ? "active" : ""} onClick={() => updateDraft(current => ({ ...current, pitchStyle: value }))}>{label}</button>)}</div></fieldset><fieldset><legend>Kentän koko</legend><div className="exercise-option-row">{([['training', 'Harjoituskenttä'], ['full', 'Iso kenttä']] as Array<[ExercisePitchPreset, string]>).map(([value, label]) => <button key={value} className={draft.pitchPreset === value ? "active" : ""} onClick={() => updateDraft(current => resizeExerciseDraftContent(current, value))}>{label}</button>)}</div></fieldset><fieldset><legend>Suunta</legend><div className="exercise-option-row">{([['landscape', 'Vaaka'], ['portrait', 'Pysty']] as Array<[ExercisePitchOrientation, string]>).map(([value, label]) => <button key={value} className={draft.pitchOrientation === value ? "active" : ""} onClick={() => updateDraft(current => ({ ...current, pitchOrientation: value }))}>{label}</button>)}</div></fieldset><fieldset><legend>Päätymaalien koko</legend><div className="exercise-goal-size-options">{([['small', 'Pieni'], ['youth', 'Juniori'], ['full', 'Iso']] as Array<[ExerciseGoalSize, string]>).map(([value, label]) => <button key={value} className={draft.goalSize === value ? "active" : ""} onClick={() => updateDraft(current => ({ ...current, goalSize: value }))}><Goal size={16} />{label}</button>)}</div></fieldset></aside>}
@@ -547,7 +605,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
       </aside>}
 
       <div className={`exercise-playback-stack ${routesOpen ? "timeline-open" : ""}`}>
-        <div className="exercise-playback"><button className={playing ? "active" : ""} onClick={togglePlayback}>{playing ? <Pause size={16} /> : <Play size={16} />} {playing ? "Pysäytä" : "Toista"}</button><button className="exercise-route-count" onClick={() => setRoutesOpen(current => !current)} disabled={!draft.paths.length} aria-expanded={routesOpen} aria-label={`Aikajana, ${formatRouteCount(draft.paths.length)}`}>Aikajana</button><div className="exercise-speed-switch" aria-label="Toistonopeus">{([1, 1.5, 2] as const).map(speed => <button key={speed} className={playbackSpeed === speed ? "active" : ""} aria-pressed={playbackSpeed === speed} title={`${speed}×: juoksu ${EXERCISE_NATURAL_SPEEDS.runKmh * speed} km/h, pallo ${EXERCISE_NATURAL_SPEEDS.passKmh * speed} km/h`} onClick={() => { setPlaying(false); setPlaybackSpeed(speed); }}>{speed}×</button>)}</div><button className="exercise-clear-routes" onClick={() => setClearRoutesOpen(true)} disabled={!draft.paths.length}><Redo2 size={15} />Tyhjennä reitit</button></div>
+        <div className="exercise-playback"><button className={playing ? "active" : ""} onClick={togglePlayback}>{playing ? <Pause size={16} /> : <Play size={16} />} {playing ? "Pysäytä" : "Toista"}</button><button className="exercise-route-count" onClick={() => setRoutesOpen(current => !current)} disabled={!draft.paths.length} aria-expanded={routesOpen} aria-label={`Aikajana, ${formatRouteCount(draft.paths.length)}`}>Aikajana</button><div className={`exercise-speed-switch speed-${playbackSpeed === 1 ? "1" : playbackSpeed === 1.5 ? "1-5" : "2"}`} aria-label="Toistonopeus"><span className="exercise-speed-switch-thumb" aria-hidden="true" />{([1, 1.5, 2] as const).map(speed => <button key={speed} className={playbackSpeed === speed ? "active" : ""} aria-pressed={playbackSpeed === speed} title={`${speed}×: juoksu ${EXERCISE_NATURAL_SPEEDS.runKmh * speed} km/h, pallo ${EXERCISE_NATURAL_SPEEDS.passKmh * speed} km/h`} onClick={() => { setPlaying(false); setPlaybackSpeed(speed); }}>{speed}×</button>)}</div><button className="exercise-clear-routes" onClick={() => setClearRoutesOpen(true)} disabled={!draft.paths.length}><Redo2 size={15} />Tyhjennä reitit</button></div>
         {routesOpen && <aside className={`exercise-timeline-editor ${timelineLanes.length > 5 ? "has-overflow" : ""}`} aria-label="Reittien aikajana">
           <header><div><b>Aikajana</b><span>Kesto {formatTimelineTime(timeline.totalMs)}</span></div><small>{playbackSpeed.toString().replace(".", ",")}× · perusnopeus: juoksu {EXERCISE_NATURAL_SPEEDS.runKmh * playbackSpeed} km/h · pallo {EXERCISE_NATURAL_SPEEDS.passKmh * playbackSpeed} km/h</small><button onClick={() => setRoutesOpen(false)} aria-label="Sulje aikajana"><X size={16} /></button></header>
           <div className="exercise-timeline-body"><div className="exercise-timeline-labels"><span className="ruler-spacer" />{timelineLanes.map((_, index) => <span key={index}>Raita {index + 1}</span>)}</div><div className="exercise-timeline-track-area" ref={timelineTrackRef}><div className="exercise-timeline-ruler">{timelineTicks.map(tick => <span key={tick} style={{ left: `${tick / timelineWindowMs * 100}%` }}>{tick / 1000}s</span>)}</div>{timelineTicks.map(tick => <i className="exercise-timeline-grid-line" key={tick} style={{ left: `${tick / timelineWindowMs * 100}%` }} />)}{timelineLanes.map((lane, index) => <div className="exercise-timeline-track" key={index}>{lane.map(entry => renderTimelineClip(entry, index))}</div>)}<div className={`exercise-timeline-playhead ${scrubbing ? "dragging" : ""}`} role="slider" tabIndex={0} aria-label="Toiston kohta" aria-valuemin={0} aria-valuemax={Math.round(timeline.totalMs)} aria-valuenow={Math.round(playbackPositionMs)} aria-valuetext={formatTimelineTime(playbackPositionMs)} style={{ left: `${playbackPositionMs / timelineWindowMs * 100}%` }} onPointerDown={event => { event.preventDefault(); setPlaying(false); setScrubbing(true); seekTimeline(event.clientX); }} onKeyDown={event => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setPlaying(false); setPlaybackElapsedMs(current => Math.min(timeline.totalMs, Math.max(0, current + (event.key === "ArrowRight" ? 100 : -100)))); }}><span>{formatTimelineTime(playbackPositionMs)}</span></div></div></div>

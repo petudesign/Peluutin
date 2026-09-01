@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { analytics, type AnalyticsConsent } from "../../analytics";
 import { createBackup, formatFileSize, getBackupSizeBytes, parseBackup, serializeBackup, type PeluutinBackup } from "../../data/backup";
+import { collectExerciseBackup } from "../exercises/exerciseStorage";
 import type { ActiveMatch, Formation, ScheduledMatch, Team } from "../../types";
 
 interface AppSettingsDialogProps {
@@ -19,7 +20,7 @@ interface AppSettingsDialogProps {
 export function AppSettingsDialog({ theme, teams, scheduledMatches, activeMatch, defaultFormations, closeLabel = "Sulje", onThemeChange, onRestoreBackup, onClose }: AppSettingsDialogProps) {
   const [analyticsConsent, setAnalyticsConsent] = useState<AnalyticsConsent | null>(() => analytics.getConsent());
   const [backupStatus, setBackupStatus] = useState("");
-  const backup = useMemo(() => createBackup(teams, scheduledMatches, activeMatch), [teams, scheduledMatches, activeMatch]);
+  const backup = useMemo(() => createBackup(teams, scheduledMatches, activeMatch, collectExerciseBackup(teams.map(team => team.id))), [teams, scheduledMatches, activeMatch]);
   const backupText = useMemo(() => serializeBackup(backup), [backup]);
   const backupSize = useMemo(() => getBackupSizeBytes(backup), [backup]);
 
@@ -82,7 +83,7 @@ export function AppSettingsDialog({ theme, teams, scheduledMatches, activeMatch,
           <div>
             <span className="eyebrow">VARMUUSKOPIO</span>
             <h3>Pidä tiedot tallessa</h3>
-            <p>Vie joukkueet, pelaajat, muodostelmat, pelihistorian ja tulevat pelit yhteen JSON-tiedostoon. Tiedosto jää omalle laitteellesi.</p>
+            <p>Vie joukkueet, pelaajat, muodostelmat, pelihistorian, tulevat pelit ja harjoitteet yhteen JSON-tiedostoon. Tiedosto jää omalle laitteellesi.</p>
           </div>
           <div className="backup-panel">
             <div className="backup-actions">
@@ -94,7 +95,7 @@ export function AppSettingsDialog({ theme, teams, scheduledMatches, activeMatch,
           </div>
         </section>
         <section className="preference-section preference-info">
-          <div><span className="eyebrow">TIETOSUOJA JA TALLENNUS</span><h3>Tiedot pysyvät tällä laitteella</h3><p>Joukkueet, pelaajat, muodostelmat ja pelihistoria tallennetaan tämän selaimen paikalliseen tallennustilaan. Niitä ei lähetetä Peluuttimen palvelimelle.</p></div>
+          <div><span className="eyebrow">TIETOSUOJA JA TALLENNUS</span><h3>Tiedot pysyvät tällä laitteella</h3><p>Joukkueet, pelaajat, muodostelmat, pelihistoria ja harjoitteet tallennetaan tämän selaimen paikalliseen tallennustilaan. Niitä ei lähetetä Peluuttimen palvelimelle.</p></div>
           <div className="storage-info">
             <section><h3>Pidä tiedot tallessa</h3><p>Selaimen sivustodatan tyhjentäminen tai selaimen poistaminen voi poistaa tallennetut tiedot. Vie varmuuskopio tiedostoksi, jos haluat säilyttää kopion muualla.</p></section>
             <section><h3>Tietojen poistaminen</h3><p>Voit poistaa yksittäisiä pelejä tai kokonaisen joukkueen Joukkueet-näkymästä. Kaikki tiedot voi poistaa myös tyhjentämällä Peluuttimen sivustodatan selaimen asetuksista.</p></section>

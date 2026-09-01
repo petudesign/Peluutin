@@ -1,7 +1,8 @@
 import { parseActiveMatch, parseScheduledMatches, parseTeams } from "../storage";
+import type { ExerciseBackupData, SavedExercise } from "../features/exercises/exerciseStorage";
 import type { ActiveMatch, Formation, ScheduledMatch, Team } from "../types";
 
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export interface PeluutinBackup {
   version: typeof BACKUP_VERSION;
@@ -9,6 +10,7 @@ export interface PeluutinBackup {
   teams: Team[];
   scheduledMatches: ScheduledMatch[];
   activeMatch: ActiveMatch | null;
+  exercises: ExerciseBackupData;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -18,6 +20,7 @@ export function createBackup(
   teams: Team[],
   scheduledMatches: ScheduledMatch[],
   activeMatch: ActiveMatch | null,
+  exercises: ExerciseBackupData = { drafts: {}, savedExercises: [] },
 ): PeluutinBackup {
   return {
     version: BACKUP_VERSION,
@@ -25,6 +28,7 @@ export function createBackup(
     teams,
     scheduledMatches,
     activeMatch,
+    exercises,
   };
 }
 
@@ -40,7 +44,7 @@ export function parseBackup(raw: string, defaultFormations: Formation[]): Peluut
     throw new Error("Varmuuskopiotiedosto ei ole kelvollinen JSON-tiedosto.");
   }
 
-  if (!isRecord(value) || value.version !== BACKUP_VERSION || !Array.isArray(value.teams) || !Array.isArray(value.scheduledMatches)) {
+  if (!isRecord(value) || ![1, BACKUP_VERSION].includes(value.version as number) || !Array.isArray(value.teams) || !Array.isArray(value.scheduledMatches)) {
     throw new Error("Varmuuskopion versio tai rakenne ei ole tuettu.");
   }
 
@@ -54,12 +58,20 @@ export function parseBackup(raw: string, defaultFormations: Formation[]): Peluut
     throw new Error("Varmuuskopiosta ei löytynyt palautettavia tietoja.");
   }
 
+  const exercisesValue = isRecord(value.exercises) ? value.exercises : {};
+  const draftsValue = isRecord(exercisesValue.drafts) ? exercisesValue.drafts : {};
+  const drafts = Object.fromEntries(Object.entries(draftsValue).filter(([, draft]) => isRecord(draft) && typeof draft.name === "string" && Array.isArray(draft.markers) && Array.isArray(draft.paths) && Array.isArray(draft.annotations))) as ExerciseBackupData["drafts"];
+  const savedExercises = Array.isArray(exercisesValue.savedExercises)
+    ? exercisesValue.savedExercises.filter((item): item is SavedExercise => isRecord(item) && typeof item.id === "string" && typeof item.teamId === "string" && typeof item.name === "string" && isRecord(item.draft) && Array.isArray(item.draft.markers) && Array.isArray(item.draft.paths) && Array.isArray(item.draft.annotations) && typeof item.createdAt === "string" && typeof item.updatedAt === "string")
+    : [];
+
   return {
     version: BACKUP_VERSION,
     exportedAt: typeof value.exportedAt === "string" ? value.exportedAt : new Date().toISOString(),
     teams,
     scheduledMatches,
     activeMatch,
+    exercises: { drafts, savedExercises },
   };
 }
 

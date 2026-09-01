@@ -16,6 +16,7 @@ import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { AnalyticsView } from "./features/match/AnalyticsView";
+import { restoreExerciseBackup } from "./features/exercises/exerciseStorage";
 import { changePlayerGoal } from "./features/match/matchLogic";
 import { scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
@@ -398,6 +399,7 @@ export function App() {
   const restoreBackup = (backup: PeluutinBackup) => {
     setTeams(backup.teams);
     setScheduledMatches(backup.scheduledMatches);
+    restoreExerciseBackup(backup.exercises);
     const restored = backup.activeMatch;
     const nextTeam = backup.teams.find((team) => team.id === restored?.teamId) || backup.teams[0];
     if (!nextTeam) return;
