@@ -420,6 +420,7 @@ export function App() {
     updateSettingsTeam((team) => ({ ...team, players: [...team.players, player] }));
     if (settingsTeamId === teamId) {
       setMinutes((current) => ({ ...current, [player.id]: 0 }));
+      setActivePlayerIds((current) => current.includes(player.id) ? current : [...current, player.id]);
       if (newMatchOpen) setActivePlayerDraft((current) => [...current, player.id]);
     }
     setNewPlayerName("");
