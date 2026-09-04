@@ -2438,6 +2438,7 @@ button:active:not(:disabled) {
   .topbar:not(.is-compact) .team-score.away {
     justify-self: stretch;
     padding-right: 28px;
+    transform: translateX(-12px);
   }
   .topbar:not(.is-compact) .mobile-brand-sport {
     top: 50%;
@@ -2446,6 +2447,10 @@ button:active:not(:disabled) {
   .topbar .team-score div,
   .topbar.is-compact .team-score div {
     width: min(150px, calc(100vw - 24px));
+  }
+  .match-clock button {
+    width: max-content;
+    white-space: nowrap;
   }
 }
 [data-theme="dark"] .topbar.is-compact .team-score button:last-child {

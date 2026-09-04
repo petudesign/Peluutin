@@ -796,7 +796,6 @@ export function App() {
         score={score}
         matchCreated={matchCreated}
         matchEnded={matchEnded}
-        matchHasActivity={matchHasActivity}
         running={running}
         seconds={seconds}
         formattedTime={formatTime(seconds)}
