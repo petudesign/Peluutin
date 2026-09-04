@@ -196,7 +196,7 @@ export function MatchWorkspace({
               >
                 {playtimeIndicator(player.id)}
                 <span className="player-meta">
-                  <span className="role">{visibleRole}</span>
+                  <span className="player-number">{player.number}</span>
                 </span>
                 <strong className={formatPitchPlayerName(player.name).length <= 10 ? "player-name-single-line" : ""}>
                   {formatPitchPlayerName(player.name)}

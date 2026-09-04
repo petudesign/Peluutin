@@ -606,6 +606,7 @@ h2 { font-size: 24px; }
 .empty-slot::before { display: none; }
 .player-meta { display: grid; place-items: center; min-height: 12px; }
 .role { display: inline; font-size: 9px; color: var(--primary); font-weight: 800; letter-spacing: .08em; }
+.player-number { display: inline; color: var(--primary); font: 800 9px/1 "Manrope"; font-variant-numeric: tabular-nums; letter-spacing: .08em; }
 .player-meta em { display: inline-flex; align-items: center; gap: 2px; font-size: 9px; font-style: normal; color: #77817d; white-space: nowrap; }
 .player-meta em span { display: inline; }
 .player-card strong {
