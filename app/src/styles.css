@@ -2437,9 +2437,10 @@ button:active:not(:disabled) {
     padding-left: 52px;
   }
   .topbar:not(.is-compact) .team-score.away {
+    grid-column: 3;
     justify-self: stretch;
     padding-right: 28px;
-    transform: translateX(-12px);
+    transform: none;
   }
   .topbar:not(.is-compact) .mobile-brand-sport {
     top: 50%;
