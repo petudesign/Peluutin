@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
@@ -90,6 +90,7 @@ export function App() {
   const [seconds, setSeconds] = useState(restoredMatch?.seconds || 0);
   const [running, setRunning] = useState(restoredMatch?.clockRunning === true);
   const [startedAt, setStartedAt] = useState(restoredMatch?.startedAt);
+  const clockStartedAtRef = useRef<number | undefined>(undefined);
   const [score, setScore] = useState<Score>(restoredMatch?.score || [0, 0]);
   const [minutes, setMinutes] = useState(restoredMatch?.minutes || Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
@@ -201,8 +202,11 @@ export function App() {
 
   useEffect(() => {
     if (!running || !startedAt) return;
+    if (clockStartedAtRef.current === undefined) {
+      clockStartedAtRef.current = performance.now() - seconds * 1000;
+    }
     const syncClock = () => {
-      const nextSeconds = Math.max(seconds, Math.floor((Date.now() - startedAt) / 1000));
+      const nextSeconds = Math.max(seconds, Math.floor((performance.now() - clockStartedAtRef.current!) / 1000));
       const delta = nextSeconds - seconds;
       if (delta <= 0) return;
       setSeconds(nextSeconds);
@@ -795,7 +799,13 @@ export function App() {
         onChangeScore={changeScore}
         onToggleClock={() => setRunning((current) => {
           const next = !current;
-          setStartedAt(next ? Date.now() - seconds * 1000 : undefined);
+          if (next) {
+            setStartedAt(Date.now() - seconds * 1000);
+            clockStartedAtRef.current = performance.now() - seconds * 1000;
+          } else {
+            setStartedAt(undefined);
+            clockStartedAtRef.current = undefined;
+          }
           return next;
         })}
         onEndMatch={() => setEndMatchOpen(true)}
