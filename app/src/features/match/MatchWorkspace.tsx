@@ -36,7 +36,9 @@ interface MatchWorkspaceProps {
   selectedFieldIndexes: number[];
   selectedPlayers: Player[];
   minutes: Record<PlayerId, number>;
+  goals: Record<PlayerId, number>;
   averageSeconds: number;
+  onChangeGoal: (playerId: PlayerId, amount: 1 | -1) => void;
   formatTime: (seconds: number) => string;
   onSelectBench: (playerId: PlayerId) => void;
   onSelectField: (index: number) => void;
@@ -60,7 +62,9 @@ export function MatchWorkspace({
   selectedFieldIndexes,
   selectedPlayers,
   minutes,
+  goals,
   averageSeconds,
+  onChangeGoal,
   formatTime,
   onSelectBench,
   onSelectField,
@@ -197,7 +201,7 @@ export function MatchWorkspace({
 
       <aside className="side-panel details">
         <span className="eyebrow">PELAAJA</span>
-        <h2>{selectedPlayers.length ? `${selectedPlayers.length} valittu` : "Valitse pelaaja"}</h2>
+        <h2>{selectedPlayers.length === 1 ? selectedPlayers[0].name : selectedPlayers.length > 1 ? `${selectedPlayers.length} valittu` : "Valitse pelaaja"}</h2>
         {selectedPlayers.length ? (
           <>
             <div className="selected-player-list">
@@ -210,6 +214,13 @@ export function MatchWorkspace({
               ))}
             </div>
             <button className="secondary" onClick={onClearSelection}>Peru valinta</button>
+            {selectedPlayers.length === 1 && (
+              <div className="goal-controls">
+                <span>Maalit {goals[selectedPlayers[0].id] || 0}</span>
+                <button className="secondary" onClick={() => onChangeGoal(selectedPlayers[0].id, -1)} disabled={!goals[selectedPlayers[0].id]}>Poista maali</button>
+                <button className="secondary" onClick={() => onChangeGoal(selectedPlayers[0].id, 1)}>Merkitse maali</button>
+              </div>
+            )}
           </>
         ) : <p className="empty-copy">Valitse pelaaja nähdäksesi hänen peliaikansa ja maalinsa tai merkitäksesi uuden maalin.</p>}
       </aside>

@@ -124,7 +124,7 @@ export function MatchHeader({
             <button className={`${running ? "pause" : ""} ${seconds > 0 ? "in-match" : ""}`} onClick={onToggleClock}>
               {running ? "Tauko" : seconds ? "Jatka" : "Aloita peli"}
             </button>
-            {seconds > 0 && <button className="end-match-button" onClick={onEndMatch}>Lopeta</button>}
+            <button className="end-match-button" onClick={onEndMatch}>{seconds > 0 ? "Lopeta" : "Poista peli"}</button>
           </div>
         )}
       </div>

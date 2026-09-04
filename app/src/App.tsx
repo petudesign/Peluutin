@@ -17,7 +17,7 @@ import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { AnalyticsView } from "./features/match/AnalyticsView";
 import { restoreExerciseBackup } from "./features/exercises/exerciseStorage";
-import { applyBatchSubstitution } from "./features/match/matchLogic";
+import { applyBatchSubstitution, changePlayerGoal } from "./features/match/matchLogic";
 import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
@@ -37,9 +37,9 @@ const defaultFormations: Formation[] = [
 }));
 
 const initialTeams = matchRepository.loadTeams(defaultFormations);
-const initialActiveMatch = matchRepository.loadActiveMatch();
-const initialScheduledMatches = matchRepository.loadScheduledMatches();
 const initialSport: Sport = localStorage.getItem("peluutin-sport") === "futsal" ? "futsal" : "football";
+const initialActiveMatch = matchRepository.loadActiveMatch(initialSport);
+const initialScheduledMatches = matchRepository.loadScheduledMatches();
 const initialTeam = initialTeams.find((team) => team.sport === initialSport && team.id === initialActiveMatch?.teamId)
   || initialTeams.find((team) => team.sport === initialSport)
   || null;
@@ -88,7 +88,8 @@ export function App() {
   const [selectedBenchIds, setSelectedBenchIds] = useState<PlayerId[]>([]);
   const [selectedFieldIndexes, setSelectedFieldIndexes] = useState<number[]>([]);
   const [seconds, setSeconds] = useState(restoredMatch?.seconds || 0);
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(restoredMatch?.clockRunning === true);
+  const [startedAt, setStartedAt] = useState(restoredMatch?.startedAt);
   const [score, setScore] = useState<Score>(restoredMatch?.score || [0, 0]);
   const [minutes, setMinutes] = useState(restoredMatch?.minutes || Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
@@ -123,6 +124,7 @@ export function App() {
   const averageSeconds = activeRoster.length
     ? activeRoster.reduce((total, player) => total + (minutes[player.id] || 0), 0) / activeRoster.length
     : 0;
+  const matchHasActivity = seconds > 0 || score.some((value) => value > 0) || Object.values(goals).some((value) => value > 0);
 
   const clearPlayerSelection = () => {
     setSelectedBenchIds([]);
@@ -169,7 +171,7 @@ export function App() {
 
   useEffect(() => {
     if (!matchCreated || matchEnded || !homeTeam) {
-      matchRepository.saveActiveMatch(null);
+      matchRepository.saveActiveMatch(null, sport);
       return;
     }
     matchRepository.saveActiveMatch({
@@ -184,8 +186,10 @@ export function App() {
       score,
       minutes,
       goals,
-    });
-  }, [matchCreated, matchEnded, activeScheduledMatchId, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals]);
+      clockRunning: running,
+      startedAt,
+    }, sport);
+  }, [matchCreated, matchEnded, activeScheduledMatchId, homeTeam, opponent, venue, activePlayerIds, formation, lineup, seconds, score, minutes, goals, running, startedAt, sport]);
 
   useEffect(() => {
     const modalOpen = settingsOpen || appSettingsOpen || newMatchOpen || gamesOpen || analyticsOpen || endMatchOpen || discardMatchOpen || resetClockOpen || deleteTeamOpen;
@@ -196,17 +200,23 @@ export function App() {
   }, [settingsOpen, appSettingsOpen, newMatchOpen, gamesOpen, analyticsOpen, endMatchOpen, discardMatchOpen, resetClockOpen, deleteTeamOpen]);
 
   useEffect(() => {
-    if (!running) return;
-    const timer = setInterval(() => {
-      setSeconds((value) => value + 1);
+    if (!running || !startedAt) return;
+    const syncClock = () => {
+      const nextSeconds = Math.max(seconds, Math.floor((Date.now() - startedAt) / 1000));
+      const delta = nextSeconds - seconds;
+      if (delta <= 0) return;
+      setSeconds(nextSeconds);
       setMinutes((current) => {
         const next = { ...current };
-        lineup.filter(Boolean).forEach((id) => { next[id] = (next[id] || 0) + 1; });
+        lineup.filter(Boolean).forEach((id) => { next[id] = (next[id] || 0) + delta; });
         return next;
       });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [running, lineup]);
+    };
+    const timer = setInterval(syncClock, 1000);
+    document.addEventListener("visibilitychange", syncClock);
+    window.addEventListener("focus", syncClock);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", syncClock); window.removeEventListener("focus", syncClock); };
+  }, [running, startedAt, seconds, lineup]);
 
   const activateTeam = (nextTeam: Team) => {
     const nextFormation = (nextTeam.formations || defaultFormations)[0];
@@ -231,13 +241,26 @@ export function App() {
   const changeSport = (nextSport: Sport) => {
     if (nextSport === sport) return;
     const nextTeam = teams.find((team) => team.sport === nextSport) || null;
+    const nextMatch = nextTeam ? matchRepository.loadActiveMatch(nextSport) : null;
+    const nextFormation = nextTeam?.formations?.find((item) => item.id === nextMatch?.formation) || nextTeam?.formations?.[0];
+    const nextLineup = nextMatch?.lineup || nextTeam?.players.slice(0, nextFormation?.slots.length || 8).map((player) => player.id) || [];
     setSport(nextSport);
     setTeamId(nextTeam?.id || "");
     setSettingsTeamId(nextTeam?.id || "");
     setHistoryTeamId(nextTeam?.id || "");
-    setMatchCreated(false);
+    setOpponent(nextMatch?.opponent || "");
+    setVenue(nextMatch?.venue || "home");
+    setActivePlayerIds(nextMatch?.activePlayerIds || nextTeam?.players.map((player) => player.id) || []);
+    setFormation(nextMatch?.formation || nextFormation?.id || defaultFormations[0].id);
+    setLineup(nextLineup);
+    setSeconds(nextMatch?.seconds || 0);
+    setScore(nextMatch?.score || [0, 0]);
+    setMinutes(nextMatch?.minutes || Object.fromEntries((nextTeam?.players || []).map((player) => [player.id, 0])));
+    setGoals(nextMatch?.goals || {});
+    setMatchCreated(Boolean(nextMatch));
     setMatchEnded(false);
-    setRunning(false);
+    setRunning(nextMatch?.clockRunning === true);
+    setStartedAt(nextMatch?.startedAt);
     clearPlayerSelection();
     setActiveScheduledMatchId(undefined);
   };
@@ -260,7 +283,16 @@ export function App() {
 
   const selectBench = (playerId: PlayerId) => {
     if (!bench.some((player) => player.id === playerId)) return;
-    setSelectedFieldIndexes([]);
+    if (selectedFieldIndexes.length) {
+      const nextBenchIds = selectedBenchIds.includes(playerId)
+        ? selectedBenchIds.filter((id) => id !== playerId)
+        : selectedBenchIds.length < selectedFieldIndexes.length ? [...selectedBenchIds, playerId] : selectedBenchIds;
+      if (nextBenchIds.length === selectedFieldIndexes.length) {
+        setLineup((current) => applyBatchSubstitution(current, nextBenchIds, selectedFieldIndexes));
+        clearPlayerSelection();
+      } else setSelectedBenchIds(nextBenchIds);
+      return;
+    }
     setSelectedBenchIds((current) => current.includes(playerId)
       ? current.filter((id) => id !== playerId)
       : current.length < 5 ? [...current, playerId] : current);
@@ -278,6 +310,15 @@ export function App() {
 
   const selectField = (index: number) => {
     if (!byId[lineup[index]]) return;
+    if (!selectedBenchIds.length && selectedFieldIndexes.length === 1 && selectedFieldIndexes[0] !== index) {
+      setLineup((current) => {
+        const next = [...current];
+        [next[selectedFieldIndexes[0]], next[index]] = [next[index], next[selectedFieldIndexes[0]]];
+        return next;
+      });
+      clearPlayerSelection();
+      return;
+    }
     const nextIndexes = selectedFieldIndexes.includes(index)
       ? selectedFieldIndexes.filter((item) => item !== index)
       : selectedFieldIndexes.length < (selectedBenchIds.length || 5) ? [...selectedFieldIndexes, index] : selectedFieldIndexes;
@@ -503,17 +544,24 @@ export function App() {
     setMatchCreated(Boolean(restored?.teamId === nextTeam.id));
     setMatchEnded(false);
     setRunning(false);
+    setStartedAt(undefined);
     clearPlayerSelection();
   };
 
   const saveMatch = () => {
+    if (!matchHasActivity) return;
     const match = currentMatchData();
     updateCurrentTeam((team) => ({ ...team, history: [match, ...(team.history || [])] }));
     setHistoryNotice("Peli tallennettu historiaan.");
   };
 
   const endMatch = () => {
+    if (!matchHasActivity) {
+      discardMatch();
+      return;
+    }
     setRunning(false);
+    setStartedAt(undefined);
     saveMatch();
     setMatchEnded(true);
     if (activeScheduledMatchId) setScheduledMatches((current) => current.filter((item) => item.id !== activeScheduledMatchId));
@@ -528,13 +576,15 @@ export function App() {
     setActiveScheduledMatchId(undefined);
     setEndMatchOpen(false);
     setDiscardMatchOpen(false);
-    setHistoryNotice("Peli lopetettiin tallentamatta.");
+    setHistoryNotice(matchHasActivity ? "Peli lopetettiin tallentamatta." : "Käynnistämätön peli poistettiin.");
     analytics.matchCompleted(false, seconds);
   };
 
   const resetClock = () => {
     setSeconds(0);
     setMinutes(Object.fromEntries(roster.map((player) => [player.id, 0])));
+    setRunning(false);
+    setStartedAt(undefined);
     setResetClockOpen(false);
   };
 
@@ -562,15 +612,27 @@ export function App() {
   };
 
   const openNewMatch = () => {
+    if (matchCreated && !matchEnded && !matchHasActivity) {
+      setMatchCreated(false);
+      setMatchEnded(false);
+      setRunning(false);
+      setStartedAt(undefined);
+    }
     setOpponentDraft(opponent);
     setVenueDraft(venue);
     setActivePlayerDraft(roster.map((player) => player.id));
     setNewMatchOpen(true);
   };
 
+  const changeGoal = (playerId: PlayerId, amount: 1 | -1) => {
+    const result = changePlayerGoal(goals, score, playerId, venue === "home" ? 0 : 1, amount);
+    setGoals(result.goals);
+    setScore(result.score);
+  };
+
   const createMatch = (formationId: string, startingLineup: PlayerId[]) => {
     const nextOpponent = cleanName(opponentDraft);
-    if (!nextOpponent || (matchCreated && !matchEnded)) return;
+    if (!nextOpponent || (matchCreated && !matchEnded && matchHasActivity)) return;
     setOpponent(nextOpponent);
     setVenue(venueDraft);
     setActivePlayerIds(activePlayerDraft);
@@ -582,6 +644,7 @@ export function App() {
     setGoals({});
     clearPlayerSelection();
     setRunning(false);
+    setStartedAt(undefined);
     setMatchEnded(false);
     setMatchCreated(true);
     setActiveScheduledMatchId(undefined);
@@ -729,7 +792,11 @@ export function App() {
         seconds={seconds}
         formattedTime={formatTime(seconds)}
         onChangeScore={changeScore}
-        onToggleClock={() => setRunning(!running)}
+        onToggleClock={() => setRunning((current) => {
+          const next = !current;
+          setStartedAt(next ? Date.now() - seconds * 1000 : undefined);
+          return next;
+        })}
         onEndMatch={() => setEndMatchOpen(true)}
         onNewMatch={openNewMatch}
         onOpenTeams={openTeamSettings}
@@ -766,6 +833,8 @@ export function App() {
           minutes={minutes}
           averageSeconds={averageSeconds}
           formatTime={formatTime}
+          goals={goals}
+          onChangeGoal={changeGoal}
           onSelectBench={selectBench}
           onSelectField={selectField}
           onSelectFieldUnit={selectFieldUnit}
@@ -794,7 +863,7 @@ export function App() {
           formations={teamFormations}
           initialFormationId={formation}
           scheduledMatches={scheduledMatches}
-          canStartNow={!matchCreated || matchEnded}
+          canStartNow={!matchCreated || matchEnded || !matchHasActivity}
           onSelectTeam={activateTeam}
           onOpponentChange={setOpponentDraft}
           onVenueChange={setVenueDraft}
@@ -815,7 +884,7 @@ export function App() {
           activeScheduledMatchId={activeScheduledMatchId}
           currentTeamId={teamId}
           historyTeamId={historyTeamId}
-          canSaveMatch={matchCreated}
+          canSaveMatch={matchCreated && matchHasActivity}
           historyNotice={historyNotice}
           formatTime={formatTime}
           onNewMatch={() => { setGamesOpen(false); openNewMatch(); }}
@@ -832,11 +901,11 @@ export function App() {
 
       {endMatchOpen && (
         <ConfirmDialog
-          title="Lopetetaanko peli?"
-          description={`Peli päättyy aikaan ${formatTime(seconds)} ja tallennetaan pelihistoriaan. Sitä ei voi enää jatkaa.`}
-          confirmLabel="Lopeta ja tallenna"
+          title={matchHasActivity ? "Lopetetaanko peli?" : "Poistetaanko käynnistämätön peli?"}
+          description={matchHasActivity ? `Peli päättyy aikaan ${formatTime(seconds)} ja tallennetaan pelihistoriaan. Sitä ei voi enää jatkaa.` : "Kelloa ei ole käynnistetty, joten peliä ei tallenneta historiaan."}
+          confirmLabel={matchHasActivity ? "Lopeta ja tallenna" : "Poista peli"}
           cancelLabel="Jatka peliä"
-          secondaryActionLabel="Lopeta tallentamatta"
+          secondaryActionLabel={matchHasActivity ? "Lopeta tallentamatta" : undefined}
           onConfirm={endMatch}
           onCancel={() => setEndMatchOpen(false)}
           onSecondaryAction={() => {

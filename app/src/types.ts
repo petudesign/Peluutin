@@ -62,6 +62,8 @@ export interface ActiveMatch {
   score: Score;
   minutes: Record<PlayerId, number>;
   goals: Record<PlayerId, number>;
+  clockRunning?: boolean;
+  startedAt?: number;
 }
 
 export interface ScheduledMatch {

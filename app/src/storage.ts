@@ -107,6 +107,8 @@ export function parseActiveMatch(raw: string | null): ActiveMatch | null {
       score: value.score as Score,
       minutes: value.minutes as ActiveMatch["minutes"],
       goals: value.goals as ActiveMatch["goals"],
+      clockRunning: value.clockRunning === true,
+      startedAt: typeof value.startedAt === "number" && Number.isFinite(value.startedAt) ? value.startedAt : undefined,
     };
   } catch {
     return null;

@@ -555,6 +555,9 @@ h2 { font-size: 24px; }
 }
 .selected-player-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .selected-player-row > span:last-child { font: 700 12px/1 "Manrope"; font-variant-numeric: tabular-nums; }
+.goal-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.goal-controls > span { grid-column: 1 / -1; padding: 8px 10px; border-radius: 9px; background: var(--surface-subtle); font-size: 12px; font-weight: 800; }
+.goal-controls button { min-height: 38px; padding: 8px 10px; }
 .big-time { font: 800 36px/1 "Manrope"; margin: 20px 0 8px; font-variant-numeric: tabular-nums; }
 .playtime-comparison { margin: 0 0 16px; font-size: 12px; font-weight: 700; line-height: 1.4; }
 .playtime-comparison.behind { color: var(--playtime-behind); }
@@ -655,6 +658,31 @@ h2 { font-size: 24px; }
 @media (max-width: 1120px) and (min-width: 821px) {
   .desktop-brand-lockup { display: none; }
   .desktop-brand img { width: 30px; height: 30px; }
+}
+@media (min-width: 721px) and (max-width: 820px) {
+  .desktop-brand { display: none; }
+  .mobile-brand-sport {
+    position: absolute;
+    z-index: 5;
+    top: 8px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+  }
+  .mobile-brand-sport > .mobile-sport-trigger {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 34px;
+    padding: 2px 6px 2px 2px;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    background: var(--surface-panel);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .mobile-sport-trigger img { width: 28px; height: 28px; }
+  .mobile-brand-sport .sport-switcher-menu { position: fixed; top: 48px; left: 12px; width: min(360px, calc(100vw - 24px)); }
 }
 @media (max-width: 720px) {
   .app-shell { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
@@ -1558,6 +1586,9 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
   .upcoming-actions { display: grid; grid-template-columns: 1fr auto; }
   .upcoming-actions button { min-height: 40px; }
   .schedule-fields { grid-template-columns: 1fr; }
+  .new-match-modal .create-match-button,
+  .new-match-modal .schedule-match-button,
+  .new-match-modal .lineup-edit-trigger { min-height: 48px; font-size: 15px; }
   .new-match-modal.lineup-step .settings-header { align-items: flex-start; gap: 10px; }
   .new-match-modal.lineup-step .settings-header > div { min-width: 0; }
   .new-match-modal.lineup-step .settings-header h2 { font-size: 21px; line-height: 1.3; }
