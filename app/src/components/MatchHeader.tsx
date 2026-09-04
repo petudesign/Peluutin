@@ -8,6 +8,7 @@ interface MatchHeaderProps {
   score: Score;
   matchCreated: boolean;
   matchEnded: boolean;
+  matchHasActivity: boolean;
   running: boolean;
   seconds: number;
   formattedTime: string;
@@ -29,6 +30,7 @@ export function MatchHeader({
   score,
   matchCreated,
   matchEnded,
+  matchHasActivity,
   running,
   seconds,
   formattedTime,
@@ -124,7 +126,7 @@ export function MatchHeader({
             <button className={`${running ? "pause" : ""} ${seconds > 0 ? "in-match" : ""}`} onClick={onToggleClock}>
               {running ? "Tauko" : seconds ? "Jatka" : "Aloita peli"}
             </button>
-            <button className="end-match-button" onClick={onEndMatch}>{seconds > 0 ? "Lopeta" : "Poista peli"}</button>
+            {matchHasActivity && <button className="end-match-button" onClick={onEndMatch}>Lopeta</button>}
           </div>
         )}
       </div>
