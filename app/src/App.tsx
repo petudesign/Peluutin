@@ -38,7 +38,7 @@ const defaultFormations: Formation[] = [
 
 const initialTeams = matchRepository.loadTeams(defaultFormations);
 const initialSport: Sport = localStorage.getItem("peluutin-sport") === "futsal" ? "futsal" : "football";
-const initialActiveMatch = matchRepository.loadActiveMatch(initialSport);
+const initialActiveMatch = matchRepository.loadActiveMatch(initialSport, initialTeams.filter((team) => team.sport === initialSport).map((team) => team.id));
 const initialScheduledMatches = matchRepository.loadScheduledMatches();
 const initialTeam = initialTeams.find((team) => team.sport === initialSport && team.id === initialActiveMatch?.teamId)
   || initialTeams.find((team) => team.sport === initialSport)
@@ -241,7 +241,7 @@ export function App() {
   const changeSport = (nextSport: Sport) => {
     if (nextSport === sport) return;
     const nextTeam = teams.find((team) => team.sport === nextSport) || null;
-    const nextMatch = nextTeam ? matchRepository.loadActiveMatch(nextSport) : null;
+    const nextMatch = nextTeam ? matchRepository.loadActiveMatch(nextSport, [nextTeam.id]) : null;
     const nextFormation = nextTeam?.formations?.find((item) => item.id === nextMatch?.formation) || nextTeam?.formations?.[0];
     const nextLineup = nextMatch?.lineup || nextTeam?.players.slice(0, nextFormation?.slots.length || 8).map((player) => player.id) || [];
     setSport(nextSport);
@@ -262,7 +262,7 @@ export function App() {
     setRunning(nextMatch?.clockRunning === true);
     setStartedAt(nextMatch?.startedAt);
     clearPlayerSelection();
-    setActiveScheduledMatchId(undefined);
+    setActiveScheduledMatchId(nextMatch?.scheduledMatchId);
   };
 
   const openTeamSettings = () => {
