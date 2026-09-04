@@ -203,7 +203,8 @@ export function App() {
   useEffect(() => {
     if (!running || !startedAt) return;
     if (clockStartedAtRef.current === undefined) {
-      clockStartedAtRef.current = performance.now() - seconds * 1000;
+      const restoredSeconds = Math.max(seconds, Math.floor(Math.max(0, Date.now() - startedAt) / 1000));
+      clockStartedAtRef.current = performance.now() - restoredSeconds * 1000;
     }
     const syncClock = () => {
       const nextSeconds = Math.max(seconds, Math.floor((performance.now() - clockStartedAtRef.current!) / 1000));
