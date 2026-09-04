@@ -669,8 +669,29 @@ h2 { font-size: 24px; }
   .playtime-indicator { min-width: 9px; font-size: 9px; }
 }
 @media (max-width: 1120px) and (min-width: 821px) {
-  .desktop-brand-lockup { display: none; }
-  .desktop-brand img { width: 30px; height: 30px; }
+  .desktop-brand { display: none; }
+  .mobile-brand-sport {
+    position: absolute;
+    z-index: 5;
+    top: 8px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+  }
+  .mobile-brand-sport > .mobile-sport-trigger {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 34px;
+    padding: 2px 6px 2px 2px;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    background: var(--surface-panel);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .mobile-sport-trigger img { width: 28px; height: 28px; }
+  .mobile-brand-sport .sport-switcher-menu { position: fixed; top: 48px; left: 12px; width: min(360px, calc(100vw - 24px)); }
 }
 @media (min-width: 721px) and (max-width: 820px) {
   .desktop-brand { display: none; }
