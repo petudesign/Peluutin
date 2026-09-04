@@ -86,7 +86,7 @@ export function MatchWorkspace({
       : state === "ahead"
         ? "Yli aktiivisten pelaajien keskiarvon"
         : "Lähellä aktiivisten pelaajien keskiarvoa";
-    return <span className={`playtime-indicator ${state}`} title={label} aria-label={label}>{symbol}</span>;
+    return <span className={`playtime-indicator ${state}`} title={label} aria-label={label}><span aria-hidden="true">{symbol}</span></span>;
   };
 
   return (
@@ -123,7 +123,7 @@ export function MatchWorkspace({
               onClick={() => onSelectBench(player.id)}
             >
               <span className="avatar">{player.number}</span>
-              <span><strong>{player.name}</strong><small>Valmiina vaihtoon</small></span>
+              <span className="bench-player-copy"><strong>{player.name}</strong></span>
               <span className="bench-time-meta">
                 {playtimeIndicator(player.id)}
                 <span className="player-time">{formatTime(minutes[player.id] || 0)}</span>
@@ -140,7 +140,11 @@ export function MatchWorkspace({
                 return player && (
                   <button className={selectedFieldIndexes.includes(index) ? "selected" : ""} key={id} onClick={() => onSelectField(index)}>
                     <strong>{player.name}</strong>
-                    <span>{playtimeIndicator(id)} {displayRole(slots[index][0])} · {formatTime(minutes[id] || 0)}</span>
+                    <span className="replace-player-meta">
+                      <span className="replace-player-role">{displayRole(slots[index][0])}</span>
+                      <span className="replace-player-time">{formatTime(minutes[id] || 0)}</span>
+                    </span>
+                    <span className="replace-player-status">{playtimeIndicator(id)}</span>
                   </button>
                 );
               })}
@@ -175,17 +179,18 @@ export function MatchWorkspace({
             const player = playersById[lineup[index]];
             if (!player) {
               return (
-                <div key={`${formationId}-${index}`} style={slotStyle(slots, index, sport)} className="player-card empty-slot">
+                  <div key={`${formationId}-${index}-empty`} style={slotStyle(slots, index, sport)} className="player-card empty-slot">
                   <span className="role">{visibleRole}</span><strong>Tyhjä</strong>
                 </div>
               );
             }
             return (
               <button
-                key={`${formationId}-${index}`}
+                key={`${formationId}-${index}-${player.id}`}
                 style={slotStyle(slots, index, sport)}
                 className={`player-card ${selectedBenchIds.length ? "allowed" : ""} ${selectedFieldIndexes.includes(index) ? "selected" : ""}`}
                 onClick={() => onSelectField(index)}
+                aria-pressed={selectedFieldIndexes.includes(index)}
                 aria-label={`${player.name}, paikka ${visibleRole}`}
                 title={player.name}
               >
@@ -193,7 +198,9 @@ export function MatchWorkspace({
                 <span className="player-meta">
                   <span className="role">{visibleRole}</span>
                 </span>
-                <strong>{formatPitchPlayerName(player.name)}</strong>
+                <strong className={formatPitchPlayerName(player.name).length <= 10 ? "player-name-single-line" : ""}>
+                  {formatPitchPlayerName(player.name)}
+                </strong>
                 <span className="player-time-on-field">{formatTime(minutes[player.id] || 0)}</span>
               </button>
             );

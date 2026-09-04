@@ -277,7 +277,7 @@ export function App() {
     if (!nextTeam) return;
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : nextTeam.formations?.[0]?.teamSize || activeFormation?.teamSize || 8);
+    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : matchCreated && nextTeam.id === teamId ? activeFormation?.teamSize || 8 : 8);
     setSettingsOpen(true);
   };
 
@@ -835,6 +835,7 @@ export function App() {
         />
       ) : (
         <MatchWorkspace
+          key={sport}
           bench={bench}
           lineup={lineup}
           formations={teamFormations.filter((item) => item.slots.length === slots.length)}

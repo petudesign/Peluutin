@@ -1,4 +1,4 @@
-import { CalendarDays, Check, ChevronDown, ClipboardList, Settings, UsersRound } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ClipboardList, Menu, Settings, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Score, Sport } from "../types";
 
@@ -46,8 +46,24 @@ export function MatchHeader({
   onSportChange,
 }: MatchHeaderProps) {
   const [sportMenuOpen, setSportMenuOpen] = useState(false);
+  const [tabletActionsOpen, setTabletActionsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const isScrolledRef = useRef(false);
   const sportMenuRef = useRef<HTMLDivElement>(null);
   const mobileSportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      const scrollY = Math.max(window.scrollY, 0);
+      const nextIsScrolled = isScrolledRef.current ? scrollY > 12 : scrollY > 32;
+      if (nextIsScrolled === isScrolledRef.current) return;
+      isScrolledRef.current = nextIsScrolled;
+      setIsScrolled(nextIsScrolled);
+    };
+    updateScrollState();
+    window.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrollState);
+  }, []);
 
   useEffect(() => {
     if (!sportMenuOpen) return;
@@ -75,7 +91,7 @@ export function MatchHeader({
   );
 
   return (
-    <header className="topbar">
+    <header className={`topbar${isScrolled ? " is-compact" : ""}`}>
       <div className="desktop-brand" aria-label="Peluutin Ottelut">
         <img src="/favicon.svg" alt="" />
         <span className="desktop-brand-lockup"><strong>Peluutin</strong><small>Ottelut</small></span>
@@ -112,7 +128,7 @@ export function MatchHeader({
         <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => onChangeScore(0, -1)}>
           <span className="score-minus-icon" aria-hidden="true" />
         </button>
-        <b>{score[0]}</b>
+        <b key={`home-score-${score[0]}`} className="score-value">{score[0]}</b>
         <button disabled={!matchCreated} aria-label="Lisää kotijoukkueen maali" onClick={() => onChangeScore(0, 1)}>
           <img className="add-icon" src="/assets/icon-add.svg" alt="" />
         </button>
@@ -135,7 +151,7 @@ export function MatchHeader({
         <button disabled={!matchCreated} aria-label="Vähennä vierasjoukkueen maalia" onClick={() => onChangeScore(1, -1)}>
           <span className="score-minus-icon" aria-hidden="true" />
         </button>
-        <b>{score[1]}</b>
+        <b key={`away-score-${score[1]}`} className="score-value">{score[1]}</b>
         <button disabled={!matchCreated} aria-label="Lisää vierasjoukkueen maali" onClick={() => onChangeScore(1, 1)}>
           <img className="add-icon" src="/assets/icon-add.svg" alt="" />
         </button>
@@ -145,6 +161,16 @@ export function MatchHeader({
         <span>Harjoitteet</span>
       </a>
       <button className="new-match-trigger" onClick={onNewMatch}><img className="add-icon" src="/assets/icon-add.svg" alt="" /> Uusi peli</button>
+      <div className="tablet-actions">
+        <button className="tablet-actions-trigger" aria-label="Lisätoiminnot" aria-expanded={tabletActionsOpen} onClick={() => setTabletActionsOpen((open) => !open)}>
+          <Menu size={20} aria-hidden="true" />
+        </button>
+        {tabletActionsOpen && <div className="tablet-actions-menu" role="menu">
+          <button onClick={() => { onOpenGames(); setTabletActionsOpen(false); }}><CalendarDays size={17} aria-hidden="true" />Pelit</button>
+          <button onClick={() => { onOpenTeams(); setTabletActionsOpen(false); }}><UsersRound size={17} aria-hidden="true" />Joukkueet</button>
+          <button onClick={() => { onOpenSettings(); setTabletActionsOpen(false); }}><Settings size={17} aria-hidden="true" />Asetukset</button>
+        </div>}
+      </div>
       <button className="teams-trigger" aria-label="Joukkueet" title="Joukkueet" onClick={onOpenTeams}>
         <UsersRound size={18} aria-hidden="true"/>
       </button>
