@@ -240,8 +240,9 @@ export function App() {
 
   const changeSport = (nextSport: Sport) => {
     if (nextSport === sport) return;
-    const nextTeam = teams.find((team) => team.sport === nextSport) || null;
-    const nextMatch = nextTeam ? matchRepository.loadActiveMatch(nextSport, [nextTeam.id]) : null;
+    const nextSportTeams = teams.filter((team) => team.sport === nextSport);
+    const nextMatch = matchRepository.loadActiveMatch(nextSport, nextSportTeams.map((team) => team.id));
+    const nextTeam = nextSportTeams.find((team) => team.id === nextMatch?.teamId) || nextSportTeams[0] || null;
     const nextFormation = nextTeam?.formations?.find((item) => item.id === nextMatch?.formation) || nextTeam?.formations?.[0];
     const nextLineup = nextMatch?.lineup || nextTeam?.players.slice(0, nextFormation?.slots.length || 8).map((player) => player.id) || [];
     setSport(nextSport);
@@ -647,7 +648,7 @@ export function App() {
     setStartedAt(undefined);
     setMatchEnded(false);
     setMatchCreated(true);
-    setActiveScheduledMatchId(undefined);
+    setActiveScheduledMatchId(activeScheduledMatchId);
     setHistoryNotice("");
     setNewMatchOpen(false);
     analytics.track("match_created", { source: "new" });
