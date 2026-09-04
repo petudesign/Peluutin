@@ -141,7 +141,7 @@ export function MatchWorkspace({
                   <button className={selectedFieldIndexes.includes(index) ? "selected" : ""} key={id} onClick={() => onSelectField(index)}>
                     <strong>{player.name}</strong>
                     <span className="replace-player-meta">
-                      <span className="replace-player-role">{displayRole(slots[index][0])}</span>
+                      <span className="replace-player-number">{player.number}</span>
                       <span className="replace-player-time">{formatTime(minutes[id] || 0)}</span>
                     </span>
                     <span className="replace-player-status">{playtimeIndicator(id)}</span>

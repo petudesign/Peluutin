@@ -984,7 +984,7 @@ h2 { font-size: 24px; }
   .mobile-nav {
     position: fixed;
     z-index: 40;
-    bottom: max(14px, env(safe-area-inset-bottom));
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 6px));
     left: 50%;
     width: min(calc(100% - 28px), 340px);
     transform: translateX(-50%);
@@ -1129,7 +1129,7 @@ h2 { font-size: 24px; }
   }
   .replace-grid strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
   .replace-player-meta { display: flex; align-items: baseline; gap: 7px; margin-top: 8px; }
-  .replace-player-role { color: var(--text-muted); font-size: 10px; }
+  .replace-player-number { color: var(--text-muted); font: 800 10px/1 "Manrope"; font-variant-numeric: tabular-nums; }
   .replace-player-time { color: var(--primary); font: 700 12px/1 "Manrope"; font-variant-numeric: tabular-nums; }
   .replace-player-status { position: absolute; top: 10px; right: 11px; display: grid; place-items: center; }
   .replace-player-status .playtime-indicator { min-width: 0; font-size: 15px; }
@@ -1355,6 +1355,7 @@ h2 { font-size: 24px; }
   filter: drop-shadow(0 0 2px rgba(145, 184, 201, .96)) drop-shadow(0 5px 6px rgba(4, 12, 8, .42));
 }
 [data-theme="dark"] .player-card .role { color: #9bc1ff; }
+[data-theme="dark"] .player-card .player-number { color: #d5e8ff; }
 [data-theme="dark"] .player-card .player-meta em,
 [data-theme="dark"] .player-card .player-time-on-field { color: #d5e8ff; }
 [data-theme="dark"] .player-card:hover { box-shadow: 0 7px 18px rgba(2, 8, 5, .52); }
@@ -1878,7 +1879,7 @@ input[aria-invalid="true"] { border-color: var(--danger-action) !important; }
 }
 
 @media (max-width: 720px) {
-  .topbar { grid-template-columns: 1fr 151px 1fr; }
+  .topbar { grid-template-columns: minmax(0, 1fr) 151px minmax(0, 1fr); }
   .pregame-workspace { min-height: calc(100vh - 96px - 84px); padding: 16px; }
   .pregame-card { padding: 28px 20px; }
   .pregame-card h1 { font-size: 24px; }
@@ -2438,17 +2439,17 @@ button:active:not(:disabled) {
   }
   .topbar:not(.is-compact) .team-score.away {
     grid-column: 3;
-    justify-self: stretch;
-    padding-right: 28px;
+    justify-self: end;
+    padding-right: 0;
     transform: none;
   }
   .topbar:not(.is-compact) .mobile-brand-sport {
     top: 50%;
-    transform: translateY(calc(-50% - 10px));
+    transform: translateY(calc(-50% - 30px));
   }
   .topbar .team-score div,
   .topbar.is-compact .team-score div {
-    width: min(150px, calc(100vw - 24px));
+    width: 104px;
   }
   .topbar:not(.is-compact) .match-clock {
     position: absolute;
@@ -2460,11 +2461,6 @@ button:active:not(:disabled) {
   .match-clock button {
     width: max-content;
     white-space: nowrap;
-  }
-}
-@media (min-width: 390px) and (max-width: 720px) {
-  .topbar:not(.is-compact) .mobile-brand-sport {
-    transform: translateY(calc(-50% - 18px));
   }
 }
 [data-theme="dark"] .topbar.is-compact .team-score button:last-child {
