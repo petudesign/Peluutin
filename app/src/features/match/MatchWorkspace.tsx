@@ -45,6 +45,7 @@ interface MatchWorkspaceProps {
   onSelectFieldUnit: (fieldUnitId: string) => void;
   onClearSelection: () => void;
   onChangeFormation: (formationId: string) => void;
+  onAddPlayer: () => void;
   canResetClock: boolean;
   onRequestResetClock: () => void;
   sport: Sport;
@@ -71,6 +72,7 @@ export function MatchWorkspace({
   onSelectFieldUnit,
   onClearSelection,
   onChangeFormation,
+  onAddPlayer,
   canResetClock,
   onRequestResetClock,
   sport,
@@ -99,6 +101,7 @@ export function MatchWorkspace({
             ? `${selectedBenchIds.length} vaihtopelaajaa valittu — valitse kentältä ${selectedBenchIds.length} poistuvaa (${selectedFieldIndexes.length}/${selectedBenchIds.length}).`
             : "Valitse 1–5 vaihtopelaajaa ja sen jälkeen sama määrä pelaajia kentältä."}
         </p>
+        <button className="add-player-trigger" type="button" onClick={onAddPlayer}>+ Lisää pelaaja joukkueeseen</button>
         {sport === "futsal" && fieldUnits.length ? (
           <div className="bench-field-units" aria-label="Kentälliset">
             {fieldUnits.map((unit) => {

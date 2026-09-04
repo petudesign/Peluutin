@@ -854,6 +854,7 @@ export function App() {
           onSelectFieldUnit={selectFieldUnit}
           onClearSelection={clearPlayerSelection}
           onChangeFormation={changeFormation}
+          onAddPlayer={openTeamSettings}
           canResetClock={matchCreated && !matchEnded && !running && seconds > 0}
           onRequestResetClock={() => setResetClockOpen(true)}
           sport={sport}
