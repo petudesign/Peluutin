@@ -265,6 +265,7 @@ export function App() {
     setGoals(nextMatch?.goals || {});
     setMatchCreated(Boolean(nextMatch));
     setMatchEnded(false);
+    clockStartedAtRef.current = undefined;
     setRunning(nextMatch?.clockRunning === true);
     setStartedAt(nextMatch?.startedAt);
     clearPlayerSelection();
