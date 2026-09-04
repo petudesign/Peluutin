@@ -2448,9 +2448,21 @@ button:active:not(:disabled) {
   .topbar.is-compact .team-score div {
     width: min(150px, calc(100vw - 24px));
   }
+  .topbar:not(.is-compact) .match-clock {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 151px;
+    transform: translate(-50%, calc(-50% - 3px));
+  }
   .match-clock button {
     width: max-content;
     white-space: nowrap;
+  }
+}
+@media (min-width: 390px) and (max-width: 720px) {
+  .topbar:not(.is-compact) .mobile-brand-sport {
+    transform: translateY(calc(-50% - 18px));
   }
 }
 [data-theme="dark"] .topbar.is-compact .team-score button:last-child {
