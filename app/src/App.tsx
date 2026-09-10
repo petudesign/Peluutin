@@ -21,6 +21,7 @@ import { applyBatchSubstitution, changePlayerGoal } from "./features/match/match
 import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
+import { AuthScreen } from "./components/AuthScreen";
 
 const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
@@ -49,6 +50,7 @@ const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 export function App() {
+  const [authenticated, setAuthenticated] = useState(() => localStorage.getItem("peluutin-auth") === "local-session");
   const [activeFeature, setActiveFeature] = useState<"matches" | "exercises">(() => window.location.hash === "#harjoitteet" || window.location.hash.startsWith("#harjoite=") ? "exercises" : "matches");
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("peluutin-theme") === "dark" ? "dark" : "light");
   const [teams, setTeams] = useState(initialTeams);
@@ -747,6 +749,10 @@ export function App() {
   };
 
   const sharedExercise = window.location.hash.startsWith("#harjoite=");
+
+  if (!authenticated) {
+    return <AuthScreen onAuthenticated={() => setAuthenticated(true)} />;
+  }
 
   if (!homeTeam && !sharedExercise) {
     return <Onboarding teamName={onboardingTeamName} onTeamNameChange={setOnboardingTeamName} onCreateTeam={createFirstTeam} sport={sport} onSportChange={changeSport} />;
