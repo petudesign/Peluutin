@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getExerciseImageHeight, getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
 import { exerciseDraftContentKey } from "../src/features/exercises/exerciseStorage.ts";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseAnnotationPoints, exerciseAnnotationIntersectsBox, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseAnnotationPoints, exerciseAnnotationIntersectsBox, getExerciseMarkerPositionAt, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
@@ -290,4 +290,51 @@ test("plays a pass into open space alongside a runner targeting the same locatio
   assert.equal(timeline.entries.length, 2);
   assert.ok(timeline.entries.every(entry => entry.startMs === 0 && entry.durationMs > 0));
   assert.ok(timeline.entries.find(entry => entry.pathId === "pass").durationMs < timeline.entries.find(entry => entry.pathId === "run").durationMs);
+});
+
+
+test("starts subsequent passes at the completed run endpoint and targets moved receivers", () => {
+  const runner = { ...player("blue"), id: "runner" };
+  const teammate = { ...player("blue"), id: "teammate", x: 2, z: 2 };
+  const markers = [runner, teammate];
+  const run = { id: "run", fromId: runner.id, kind: "run", toPoint: { x: 2, z: 0 }, startMs: 0, durationMs: 1000 };
+  const pass = { id: "pass", fromId: runner.id, toId: teammate.id, kind: "pass", startMs: 1000 };
+  const receive = { id: "receive", fromId: teammate.id, toId: runner.id, kind: "pass", startMs: 1000 };
+  const paths = [run, pass, receive];
+  const { entries } = buildExerciseTimeline(paths, markers);
+  assert.deepEqual(entries[1].from, run.toPoint);
+  assert.deepEqual(entries[2].to, run.toPoint);
+  const expectedDuration = getExercisePathNaturalDurationMs(pass, [{ ...runner, ...run.toPoint }, teammate]);
+  assert.equal(entries[1].durationMs, expectedDuration);
+  assert.equal(entries[1].naturalDurationMs, expectedDuration);
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 500), { x: 1, z: 0 });
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 1500), run.toPoint);
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 10000), run.toPoint);
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 0), { x: 0, z: 0 });
+});
+
+test("chains movement endpoints chronologically even when paths are stored out of order", () => {
+  const runner = { ...player("blue"), id: "runner" };
+  const first = { id: "first", fromId: runner.id, kind: "run", toPoint: { x: 2, z: 0 }, startMs: 0, durationMs: 1000 };
+  const second = { id: "second", fromId: runner.id, kind: "dribble", toPoint: { x: 2, z: 2 }, startMs: 1000, durationMs: 1000 };
+  const pass = { id: "pass", fromId: runner.id, kind: "pass", toPoint: { x: 4, z: 2 }, startMs: 2000 };
+  const paths = [pass, second, first];
+  const { entries } = buildExerciseTimeline(paths, [runner]);
+  assert.deepEqual(entries[0].from, second.toPoint);
+  assert.deepEqual(entries[1].from, first.toPoint);
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 1500), { x: 2, z: 1 });
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 3000), second.toPoint);
+  const reordered = paths.map(path => path.id === "pass" ? { ...path, startMs: 0 } : path);
+  assert.deepEqual(buildExerciseTimeline(reordered, [runner]).entries[0].from, { x: 0, z: 0 });
+});
+
+test("resolves actions during curved movement from the actual playback position", () => {
+  const runner = { ...player("blue"), id: "runner" };
+  const run = { id: "run", fromId: runner.id, kind: "run", toPoint: { x: 2, z: 0 }, curve: 1, startMs: 0, durationMs: 4000 };
+  const pass = { id: "pass", fromId: runner.id, kind: "pass", toPoint: { x: 4, z: 0 }, startMs: 2000 };
+  const paths = [run, pass];
+  const { entries } = buildExerciseTimeline(paths, [runner]);
+  assert.deepEqual(entries[1].from, { x: 1, z: .38 });
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 2000), entries[1].from);
+  assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 5000), run.toPoint);
 });

@@ -3,7 +3,7 @@ import { RotateCcw, ZoomIn } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildExerciseTimeline, EXERCISE_PITCH_DIMENSIONS, getExercise2dFitZoom, getExerciseAnnotationPoints, exerciseAnnotationIntersectsBox, getExerciseMarkerColor, getExercisePathColor, getExerciseTimelineProgressAt, type ExerciseAnnotation, type ExerciseGoalSize, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
+import { buildExerciseTimeline, EXERCISE_PITCH_DIMENSIONS, getExercise2dFitZoom, getExerciseAnnotationPoints, exerciseAnnotationIntersectsBox, getExerciseMarkerPositionAt, getExerciseMarkerColor, getExercisePathColor, getExerciseTimelineProgressAt, type ExerciseAnnotation, type ExerciseGoalSize, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
 
 interface ExerciseCanvasProps {
   theme: "light" | "dark"; view: ExerciseView; tool: ExerciseTool; markers: ExerciseMarker[]; paths: ExercisePath[]; annotations: ExerciseAnnotation[]; goalSize: ExerciseGoalSize; pitchPreset: ExercisePitchPreset; pitchOrientation: ExercisePitchOrientation; pitchStyle: ExercisePitchStyle; showNames: boolean;
@@ -273,15 +273,12 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
   const animatedMarkerPositions = useMemo(() => {
     const positions = new Map<string, THREE.Vector3>();
     if (!props.showPlaybackFrame) return positions;
-    props.paths.forEach(path => {
-      if (path.kind !== "run" && path.kind !== "dribble") return;
-      const from = markerMap[path.fromId], targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker || (path.toPoint ? { ...path.toPoint, kind: "point" } : null), entry = timelineByPath.get(path.id);
-      if (!from || !to || !entry) return;
-      const playback = getExerciseTimelineProgressAt(props.playbackPositionMs, entry, timeline.totalMs);
-      if (playback.active) positions.set(from.id, createPathCurve(path, from, to, false).getPoint(playback.progress));
+    props.markers.forEach(marker => {
+      const position = getExerciseMarkerPositionAt(marker, props.paths, timeline.entries, props.playbackPositionMs);
+      positions.set(marker.id, new THREE.Vector3(position.x, .075, position.z));
     });
     return positions;
-  }, [markerMap, props.paths, props.playbackPositionMs, props.showPlaybackFrame, timeline.totalMs, timelineByPath]);
+  }, [props.markers, props.paths, props.playbackPositionMs, props.showPlaybackFrame, timeline.entries]);
   const dimensions = EXERCISE_PITCH_DIMENSIONS[props.pitchPreset], limitX = dimensions.length / 2 - .25, limitZ = dimensions.width / 2 - .25;
   const pitchPoint = (point: THREE.Vector3) => props.pitchOrientation === "portrait" ? { x: -point.z, z: point.x } : { x: point.x, z: point.z };
   const pointer = (phase: "down" | "move" | "up", event: ThreeEvent<PointerEvent>) => {
@@ -310,7 +307,7 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
   };
   return <><color attach="background" args={[props.theme === "dark" ? "#081217" : "#e7edef"]} /><ambientLight intensity={props.theme === "dark" ? 1.25 : 1.55} /><directionalLight position={[4, 9, 5]} intensity={props.theme === "dark" ? 1.8 : 1.55} castShadow={props.view === "3d"} /><group rotation={[0, props.pitchOrientation === "portrait" ? Math.PI / 2 : 0, 0]}><Pitch goalSize={props.goalSize} preset={props.pitchPreset} style={props.pitchStyle} />{props.pitchStyle !== "plain-grass" && <Boards preset={props.pitchPreset} />}
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .01, 0]} onPointerMove={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("move", event); }} onPointerUp={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("up", event); }} onPointerCancel={(event: ThreeEvent<PointerEvent>) => pointer("up", event)} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; if (props.tool !== "select" && props.tool !== "pass" && props.tool !== "run") props.onSelect(null); pointer("down", event); }}><planeGeometry args={[dimensions.length, dimensions.width]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} /></mesh>
-    {props.paths.map(path => { const from = markerMap[path.fromId], targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker || (path.toPoint ? { ...path.toPoint, kind: "point" } : null), timelineEntry = timelineByPath.get(path.id); return from && to && timelineEntry ? <AnimatedPath key={path.id} path={path} from={from} to={to} theme={props.theme} playbackPositionMs={props.playbackPositionMs} showPlaybackFrame={props.showPlaybackFrame} timelineEntry={timelineEntry} timelineTotalMs={timeline.totalMs} selected={path.id === props.selectedPathId} erase={props.tool === "erase"} interactive={props.interactive !== false && (props.tool === "select" || props.tool === "erase")} onSelect={props.onSelectPath} /> : null; })}
+    {props.paths.map(path => { const timelineEntry = timelineByPath.get(path.id), source = markerMap[path.fromId], from = source ? { ...source, ...timelineEntry?.from } : null, targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker ? { ...targetMarker, ...timelineEntry?.to } : timelineEntry?.to ? { ...timelineEntry.to, kind: "point" } : null; return from && to && timelineEntry ? <AnimatedPath key={path.id} path={path} from={from} to={to} theme={props.theme} playbackPositionMs={props.playbackPositionMs} showPlaybackFrame={props.showPlaybackFrame} timelineEntry={timelineEntry} timelineTotalMs={timeline.totalMs} selected={path.id === props.selectedPathId} erase={props.tool === "erase"} interactive={props.interactive !== false && (props.tool === "select" || props.tool === "erase")} onSelect={props.onSelectPath} /> : null; })}
     {props.annotations.map(item => <Annotation key={item.id} item={item} erase={props.tool === "erase"} editing={item.id === props.editingTextId} selected={props.selectedAnnotationIds.includes(item.id)} theme={props.theme} interactive={props.interactive !== false && (props.tool === "select" || props.tool === "erase")} onErase={props.onEraseAnnotation} onSelect={props.onSelectAnnotation} />)}
     {selectionBox && <SelectionBox start={selectionBox.start} end={selectionBox.end} />}
     {props.markers.map(marker => <Marker key={marker.id} marker={marker} animatedPosition={animatedMarkerPositions.get(marker.id)} selected={props.selectedIds.includes(marker.id)} theme={props.theme} view={props.view} labelScale={props.labelScale} showName={props.showNames && marker.kind !== "goal"} interactive={props.interactive !== false && ["select", "erase", "pass", "run", "dribble", "shot"].includes(props.tool)} onPointerDown={(id, additive) => { if (props.tool === "select") dragging.current = id; props.onSelect(id, additive); }} />)}

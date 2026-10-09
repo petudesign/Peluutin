@@ -52,6 +52,9 @@ export interface ExerciseTimelineEntry {
   pathId: string;
   startMs: number;
   durationMs: number;
+  from?: { x: number; z: number };
+  to?: { x: number; z: number };
+  naturalDurationMs?: number;
 }
 
 export interface ExerciseAnnotation {
@@ -252,9 +255,41 @@ export function normalizeExerciseTimeline(paths: ExercisePath[], markers: Exerci
   return paths.map((path, index) => ({ ...path, startMs: Math.round(starts.get(pathPhase(path, index)) ?? 0), phase: undefined }));
 }
 
+export function getExerciseMovementPosition(from: { x: number; z: number }, to: { x: number; z: number }, curve: number, progress: number) {
+  const t = Math.min(1, Math.max(0, progress)), dx = to.x - from.x, dz = to.z - from.z;
+  const bend = Math.abs(curve) < .01 ? 0 : 2 * (1 - t) * t * curve * .38;
+  return { x: from.x + dx * t - dz * bend, z: from.z + dz * t + dx * bend };
+}
+
+export function getExerciseMarkerPositionAt(marker: ExerciseMarker, paths: ExercisePath[], entries: ExerciseTimelineEntry[], positionMs: number) {
+  let latest: ExerciseTimelineEntry | undefined, movement: ExercisePath | undefined;
+  for (const entry of entries) {
+    if (entry.startMs > positionMs || !entry.from || !entry.to) continue;
+    const path = paths.find(item => item.id === entry.pathId);
+    if (!path || path.fromId !== marker.id || (path.kind !== "run" && path.kind !== "dribble")) continue;
+    if (!latest || entry.startMs >= latest.startMs) { latest = entry; movement = path; }
+  }
+  if (!latest?.from || !latest.to || !movement) return { x: marker.x, z: marker.z };
+  return getExerciseMovementPosition(latest.from, latest.to, movement.curve ?? 0, (positionMs - latest.startMs) / Math.max(1, latest.durationMs));
+}
+
 export function buildExerciseTimeline(paths: ExercisePath[], markers: ExerciseMarker[]) {
   const normalized = normalizeExerciseTimeline(paths, markers);
-  const entries = normalized.map(path => ({ pathId: path.id, startMs: path.startMs ?? 0, durationMs: getExercisePathDurationMs(path, markers) }));
+  const chronological = [...normalized].sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
+  const resolved: ExerciseTimelineEntry[] = [];
+  chronological.forEach(path => {
+    const startMs = path.startMs ?? 0;
+    const source = markers.find(marker => marker.id === path.fromId);
+    const target = path.toId ? markers.find(marker => marker.id === path.toId) : undefined;
+    const from = source ? getExerciseMarkerPositionAt(source, normalized, resolved, startMs) : undefined;
+    const to = target ? getExerciseMarkerPositionAt(target, normalized, resolved, startMs) : path.toPoint;
+    const positionedMarkers = markers.map(marker => marker.id === source?.id && from ? { ...marker, ...from } : marker.id === target?.id && to ? { ...marker, ...to } : marker);
+    const positionedPath = path.toId ? path : { ...path, toPoint: to };
+    const naturalDurationMs = getExercisePathNaturalDurationMs(positionedPath, positionedMarkers);
+    resolved.push({ pathId: path.id, startMs, durationMs: getExercisePathDurationMs(positionedPath, positionedMarkers), from, to, naturalDurationMs });
+  });
+  const byId = new Map(resolved.map(entry => [entry.pathId, entry]));
+  const entries = normalized.map(path => byId.get(path.id)!);
   return { entries, totalMs: Math.max(1, ...entries.map(entry => entry.startMs + entry.durationMs)) };
 }
 

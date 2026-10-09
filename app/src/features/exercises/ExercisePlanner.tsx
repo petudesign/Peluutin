@@ -586,7 +586,7 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
   const renderTimelineClip = (entry: ExerciseTimelineEntry, lane: number) => {
     const path = draft.paths.find(item => item.id === entry.pathId);
     if (!path) return null;
-    const naturalDuration = getExercisePathNaturalDurationMs(path, draft.markers);
+    const naturalDuration = entry.naturalDurationMs ?? getExercisePathNaturalDurationMs(path, draft.markers);
     const durationChanged = Number.isFinite(path.durationMs) && Math.abs(entry.durationMs - naturalDuration) >= 25;
     const changeDuration = (durationMs: number) => updateDraft(current => ({ ...current, paths: setExercisePathDurationMs(current.paths, entry.pathId, durationMs, current.markers) }));
     return <div
