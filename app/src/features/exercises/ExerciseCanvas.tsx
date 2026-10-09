@@ -3,7 +3,7 @@ import { RotateCcw, ZoomIn } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildExerciseTimeline, EXERCISE_PITCH_DIMENSIONS, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExerciseTimelineProgressAt, type ExerciseAnnotation, type ExerciseGoalSize, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
+import { buildExerciseTimeline, EXERCISE_PITCH_DIMENSIONS, getExercise2dFitZoom, getExerciseAnnotationPoints, getExerciseMarkerColor, getExercisePathColor, getExerciseTimelineProgressAt, type ExerciseAnnotation, type ExerciseGoalSize, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
 
 interface ExerciseCanvasProps {
   theme: "light" | "dark"; view: ExerciseView; tool: ExerciseTool; markers: ExerciseMarker[]; paths: ExercisePath[]; annotations: ExerciseAnnotation[]; goalSize: ExerciseGoalSize; pitchPreset: ExercisePitchPreset; pitchOrientation: ExercisePitchOrientation; pitchStyle: ExercisePitchStyle; showNames: boolean;
@@ -109,10 +109,12 @@ function Pitch({ goalSize, preset, style }: { goalSize: ExerciseGoalSize; preset
   return <group>
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[dimensions.groundLength, dimensions.groundWidth]} /><meshStandardMaterial color={stripeA} roughness={.96} /></mesh>
     {Array.from({ length: 12 }, (_, index) => <mesh key={index} rotation={[-Math.PI / 2, 0, 0]} position={[-dimensions.groundLength / 2 + stripeWidth / 2 + index * stripeWidth, .006, 0]}><planeGeometry args={[stripeWidth, dimensions.groundWidth]} /><meshStandardMaterial color={index % 2 ? stripeB : stripeA} roughness={.98} /></mesh>)}
+    {style !== "plain-grass" && <>
     <PitchLine points={[[-halfLength, -halfWidth], [halfLength, -halfWidth], [halfLength, halfWidth], [-halfLength, halfWidth], [-halfLength, -halfWidth]]} /><PitchLine points={[[0, -halfWidth], [0, halfWidth]]} /><PitchLine points={center} />
     {[1, -1].map(side => { const end = side * halfLength, penalty = side * (halfLength - 1.33 * scaleX), goal = side * (halfLength - .57 * scaleX), spot = side * (halfLength - 1.03 * scaleX), penaltyHalfWidth = 2.05 * scaleZ, goalHalfWidth = .9 * scaleZ; return <group key={side}><PitchLine points={[[end, -penaltyHalfWidth], [penalty, -penaltyHalfWidth], [penalty, penaltyHalfWidth], [end, penaltyHalfWidth]]} /><PitchLine points={[[end, -goalHalfWidth], [goal, -goalHalfWidth], [goal, goalHalfWidth], [end, goalHalfWidth]]} /><mesh position={[spot, .06, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.045, 18]} /><meshBasicMaterial color={LINE} /></mesh><PitchLine points={arc(spot, 0, .8 * scaleZ, side > 0 ? Math.PI - boxArcAngle : -boxArcAngle, side > 0 ? Math.PI + boxArcAngle : boxArcAngle)} /></group>; })}
     {([[-halfLength, -halfWidth, 0, Math.PI / 2], [halfLength, -halfWidth, Math.PI / 2, Math.PI], [-halfLength, halfWidth, -Math.PI / 2, 0], [halfLength, halfWidth, Math.PI, Math.PI * 1.5]] as Array<[number, number, number, number]>).map(([x, z, from, to], index) => <PitchLine key={index} points={arc(x, z, .18 * scaleZ, from, to, 10)} />)}
     <mesh position={[0, .06, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[.05, 18]} /><meshBasicMaterial color={LINE} /></mesh><Goal x={-halfLength - .04} size={goalSize} /><Goal x={halfLength + .04} flip size={goalSize} />
+    </>}
   </group>;
 }
 
@@ -199,7 +201,7 @@ function PathStroke({ curve, radius, color, dashed = false, opacity = .98 }: { c
   })}</group>;
 }
 
-function AnimatedPath({ path, from, to, theme, playbackPositionMs, showPlaybackFrame, timelineEntry, timelineTotalMs, selected, erase, onSelect }: { path: ExercisePath; from: ExerciseMarker; to: PathTarget; theme: "light" | "dark"; playbackPositionMs: number; showPlaybackFrame: boolean; timelineEntry: ExerciseTimelineEntry; timelineTotalMs: number; selected: boolean; erase: boolean; onSelect: (id: string) => void }) {
+function AnimatedPath({ path, from, to, theme, playbackPositionMs, showPlaybackFrame, timelineEntry, timelineTotalMs, selected, erase, interactive, onSelect }: { path: ExercisePath; from: ExerciseMarker; to: PathTarget; theme: "light" | "dark"; playbackPositionMs: number; showPlaybackFrame: boolean; timelineEntry: ExerciseTimelineEntry; timelineTotalMs: number; selected: boolean; erase: boolean; interactive: boolean; onSelect: (id: string) => void }) {
   const pulse = useRef<THREE.Group | null>(null);
   const curve = useMemo<THREE.Curve<THREE.Vector3>>(() => createPathCurve(path, from, to), [from, path, to]);
   const movementCurve = useMemo<THREE.Curve<THREE.Vector3>>(() => createPathCurve(path, from, to, false), [from, path, to]);
@@ -216,20 +218,41 @@ function AnimatedPath({ path, from, to, theme, playbackPositionMs, showPlaybackF
   });
   const animatedBall = <SoccerBall radius={.13} />;
   const dashed = path.kind === "run" || path.kind === "dribble";
-  return <group onPointerDown={(event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); onSelect(path.id); }}>{selected && <PathStroke curve={curve} radius={.075} color="#fff" dashed={dashed} opacity={.7} />}<PathStroke curve={curve} radius={.042} color={erase ? "#ff766c" : color} dashed={dashed} /><mesh><tubeGeometry args={[curve, 20, .14, 6, false]} /><meshBasicMaterial transparent opacity={.001} depthWrite={false} /></mesh>{path.kind !== "run" && !(path.kind === "dribble" && from.kind === "ball") && <group ref={pulse} visible={false}>{path.kind === "dribble" ? <group position={[.23, .02, 0]}>{animatedBall}</group> : animatedBall}</group>}</group>;
+  return <group onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (!interactive) return; event.stopPropagation(); onSelect(path.id); }}>{selected && <PathStroke curve={curve} radius={.075} color="#fff" dashed={dashed} opacity={.7} />}<PathStroke curve={curve} radius={.042} color={erase ? "#ff766c" : color} dashed={dashed} /><mesh><tubeGeometry args={[curve, 20, .14, 6, false]} /><meshBasicMaterial transparent opacity={.001} depthWrite={false} /></mesh>{path.kind !== "run" && !(path.kind === "dribble" && from.kind === "ball") && <group ref={pulse} visible={false}>{path.kind === "dribble" ? <group position={[.23, .02, 0]}>{animatedBall}</group> : animatedBall}</group>}</group>;
 }
 
-function Annotation({ item, erase, editing, selected, theme, onErase, onSelect }: { item: ExerciseAnnotation; erase: boolean; editing: boolean; selected: boolean; theme: "light" | "dark"; onErase: (id: string) => void; onSelect: (id: string) => void }) {
-  const click = (event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); erase ? onErase(item.id) : onSelect(item.id); };
+function Annotation({ item, erase, editing, selected, theme, interactive, onErase, onSelect }: { item: ExerciseAnnotation; erase: boolean; editing: boolean; selected: boolean; theme: "light" | "dark"; interactive: boolean; onErase: (id: string) => void; onSelect: (id: string) => void }) {
+  const click = (event: ThreeEvent<PointerEvent>) => { if (!interactive) return; event.stopPropagation(); erase ? onErase(item.id) : onSelect(item.id); };
   const texture = useMemo(() => item.kind === "text" ? textureFor(item.text || "Teksti", 28, theme) : null, [item.kind, item.text, theme]); useEffect(() => () => texture?.dispose(), [texture]);
   if (item.kind === "text") return editing ? null : <sprite onPointerDown={click} position={[item.points[0]?.x || 0, .16, item.points[0]?.z || 0]} scale={[1.8, .5, 1]}><spriteMaterial map={texture} transparent depthTest={false} /></sprite>;
-  const first = item.points[0], last = item.points.at(-1); if (!first || !last) return null; let points = item.points.map(point => [point.x, point.z] as [number, number]);
-  if (item.kind === "rectangle") points = [[first.x, first.z], [last.x, first.z], [last.x, last.z], [first.x, last.z], [first.x, first.z]];
-  if (item.kind === "circle") { const radiusX = Math.abs(last.x - first.x), radiusZ = Math.abs(last.z - first.z); points = Array.from({ length: 41 }, (_, index) => { const angle = index / 40 * Math.PI * 2; return [first.x + Math.cos(angle) * radiusX, first.z + Math.sin(angle) * radiusZ]; }); }
-  const curve = new THREE.CurvePath<THREE.Vector3>();
-  for (let index = 1; index < points.length; index += 1) curve.add(new THREE.LineCurve3(new THREE.Vector3(points[index - 1][0], .09, points[index - 1][1]), new THREE.Vector3(points[index][0], .09, points[index][1])));
-  const radius = ({ 1: .012, 2: .026, 3: .05 } as const)[item.width ?? 2];
-  return <group onPointerDown={click}><mesh><tubeGeometry args={[curve, Math.max(1, points.length - 1), radius, 6, false]} /><meshBasicMaterial color={selected ? "#fff" : item.color} /></mesh></group>;
+  return <AnnotationStroke item={item} selected={selected} onPointerDown={click} />;
+}
+
+function AnnotationStroke({ item, selected, onPointerDown }: { item: ExerciseAnnotation; selected: boolean; onPointerDown: (event: ThreeEvent<PointerEvent>) => void }) {
+  const geometry = useMemo(() => {
+    const points = getExerciseAnnotationPoints(item).filter((point, index, all) => index === 0 || Math.hypot(point.x - all[index - 1].x, point.z - all[index - 1].z) > .0001);
+    const halfWidth = ({ 1: .012, 2: .026, 3: .05 } as const)[item.width ?? 2];
+    const vertices: number[] = [], indices: number[] = [];
+    const closed = points.length > 2 && Math.hypot(points[0].x - points.at(-1)!.x, points[0].z - points.at(-1)!.z) < .0001;
+    points.forEach((point, index) => {
+      const before = points[index - 1] ?? (closed ? points.at(-2)! : point);
+      const after = points[index + 1] ?? (closed ? points[1] : point);
+      const incoming = new THREE.Vector2(point.x - before.x, point.z - before.z).normalize();
+      const outgoing = new THREE.Vector2(after.x - point.x, after.z - point.z).normalize();
+      if (incoming.lengthSq() === 0) incoming.copy(outgoing);
+      if (outgoing.lengthSq() === 0) outgoing.copy(incoming);
+      const normal = new THREE.Vector2(-incoming.y - outgoing.y, incoming.x + outgoing.x).normalize();
+      const scale = Math.min(halfWidth * 3, halfWidth / Math.max(.1, normal.dot(new THREE.Vector2(-outgoing.y, outgoing.x))));
+      normal.multiplyScalar(scale);
+      vertices.push(point.x + normal.x, .018, point.z + normal.y, point.x - normal.x, .018, point.z - normal.y);
+      if (index > 0) { const n = index * 2; indices.push(n - 2, n - 1, n, n - 1, n + 1, n); }
+    });
+    const result = new THREE.BufferGeometry();
+    result.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3)); result.setIndex(indices);
+    return result;
+  }, [item]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <mesh geometry={geometry} onPointerDown={onPointerDown}><meshBasicMaterial color={selected ? "#fff" : item.color} side={THREE.DoubleSide} /></mesh>;
 }
 
 function TextEditorTracker({ item, inputRef, orientation }: { item: ExerciseAnnotation; inputRef: RefObject<HTMLInputElement | null>; orientation: ExercisePitchOrientation }) {
@@ -257,9 +280,12 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
   const dimensions = EXERCISE_PITCH_DIMENSIONS[props.pitchPreset], limitX = dimensions.length / 2 - .25, limitZ = dimensions.width / 2 - .25;
   const pitchPoint = (point: THREE.Vector3) => props.pitchOrientation === "portrait" ? { x: -point.z, z: point.x } : { x: point.x, z: point.z };
   const pointer = (phase: "down" | "move" | "up", event: ThreeEvent<PointerEvent>) => {
-    const point = pitchPoint(event.point), bounded = { x: THREE.MathUtils.clamp(point.x, -limitX, limitX), z: THREE.MathUtils.clamp(point.z, -limitZ, limitZ) };
+    const groundPoint = event.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -.01), new THREE.Vector3());
+    if (!groundPoint || props.interactive === false) return;
+    event.stopPropagation();
+    const point = pitchPoint(groundPoint), bounded = { x: THREE.MathUtils.clamp(point.x, -limitX, limitX), z: THREE.MathUtils.clamp(point.z, -limitZ, limitZ) };
     if (phase === "move" && dragging.current) props.onMove(dragging.current, bounded.x, bounded.z);
-    if (props.tool === "select" && !dragging.current && props.interactive !== false) {
+    if (props.tool === "select" && !dragging.current) {
       if (phase === "down") { (event.target as unknown as PointerCaptureTarget).setPointerCapture(event.pointerId); if (!event.shiftKey) props.onSelect(null); setSelectionBox({ start: bounded, end: bounded, additive: event.shiftKey }); }
       else if (phase === "move" && selectionBox) setSelectionBox(current => current ? { ...current, end: bounded } : null);
       else if (phase === "up" && selectionBox) {
@@ -270,14 +296,19 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
       return;
     }
     if (phase === "up") dragging.current = null;
+    if (["draw", "line", "rectangle", "circle"].includes(props.tool)) {
+      const target = event.target as unknown as PointerCaptureTarget;
+      if (phase === "down") target.setPointerCapture(event.pointerId);
+      if (phase === "up") target.releasePointerCapture(event.pointerId);
+    }
     props.onPitchPointer(phase, point.x, point.z);
   };
-  return <><color attach="background" args={[props.theme === "dark" ? "#081217" : "#e7edef"]} /><ambientLight intensity={props.theme === "dark" ? 1.25 : 1.55} /><directionalLight position={[4, 9, 5]} intensity={props.theme === "dark" ? 1.8 : 1.55} castShadow={props.view === "3d"} /><group rotation={[0, props.pitchOrientation === "portrait" ? Math.PI / 2 : 0, 0]}><Pitch goalSize={props.goalSize} preset={props.pitchPreset} style={props.pitchStyle} /><Boards preset={props.pitchPreset} />
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .035, 0]} onPointerMove={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("move", event); }} onPointerUp={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("up", event); }} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; if (props.tool !== "select" && props.tool !== "pass" && props.tool !== "run") props.onSelect(null); pointer("down", event); }}><planeGeometry args={[dimensions.length, dimensions.width]} /><meshBasicMaterial transparent opacity={0} /></mesh>
-    {props.paths.map(path => { const from = markerMap[path.fromId], targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker || (path.toPoint ? { ...path.toPoint, kind: "point" } : null), timelineEntry = timelineByPath.get(path.id); return from && to && timelineEntry ? <AnimatedPath key={path.id} path={path} from={from} to={to} theme={props.theme} playbackPositionMs={props.playbackPositionMs} showPlaybackFrame={props.showPlaybackFrame} timelineEntry={timelineEntry} timelineTotalMs={timeline.totalMs} selected={path.id === props.selectedPathId} erase={props.tool === "erase"} onSelect={props.onSelectPath} /> : null; })}
-    {props.annotations.map(item => <Annotation key={item.id} item={item} erase={props.tool === "erase"} editing={item.id === props.editingTextId} selected={item.id === props.selectedAnnotationId} theme={props.theme} onErase={props.onEraseAnnotation} onSelect={props.onSelectAnnotation} />)}
+  return <><color attach="background" args={[props.theme === "dark" ? "#081217" : "#e7edef"]} /><ambientLight intensity={props.theme === "dark" ? 1.25 : 1.55} /><directionalLight position={[4, 9, 5]} intensity={props.theme === "dark" ? 1.8 : 1.55} castShadow={props.view === "3d"} /><group rotation={[0, props.pitchOrientation === "portrait" ? Math.PI / 2 : 0, 0]}><Pitch goalSize={props.goalSize} preset={props.pitchPreset} style={props.pitchStyle} />{props.pitchStyle !== "plain-grass" && <Boards preset={props.pitchPreset} />}
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .01, 0]} onPointerMove={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("move", event); }} onPointerUp={(event: ThreeEvent<PointerEvent>) => { if (!event.shiftKey) pointer("up", event); }} onPointerCancel={(event: ThreeEvent<PointerEvent>) => pointer("up", event)} onPointerDown={(event: ThreeEvent<PointerEvent>) => { if (event.shiftKey) return; if (props.tool !== "select" && props.tool !== "pass" && props.tool !== "run") props.onSelect(null); pointer("down", event); }}><planeGeometry args={[dimensions.length, dimensions.width]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} /></mesh>
+    {props.paths.map(path => { const from = markerMap[path.fromId], targetMarker = path.toId ? markerMap[path.toId] : null, to: PathTarget | null = targetMarker || (path.toPoint ? { ...path.toPoint, kind: "point" } : null), timelineEntry = timelineByPath.get(path.id); return from && to && timelineEntry ? <AnimatedPath key={path.id} path={path} from={from} to={to} theme={props.theme} playbackPositionMs={props.playbackPositionMs} showPlaybackFrame={props.showPlaybackFrame} timelineEntry={timelineEntry} timelineTotalMs={timeline.totalMs} selected={path.id === props.selectedPathId} erase={props.tool === "erase"} interactive={props.interactive !== false && (props.tool === "select" || props.tool === "erase")} onSelect={props.onSelectPath} /> : null; })}
+    {props.annotations.map(item => <Annotation key={item.id} item={item} erase={props.tool === "erase"} editing={item.id === props.editingTextId} selected={item.id === props.selectedAnnotationId} theme={props.theme} interactive={props.interactive !== false && (props.tool === "select" || props.tool === "erase")} onErase={props.onEraseAnnotation} onSelect={props.onSelectAnnotation} />)}
     {selectionBox && <SelectionBox start={selectionBox.start} end={selectionBox.end} />}
-    {props.markers.map(marker => <Marker key={marker.id} marker={marker} animatedPosition={animatedMarkerPositions.get(marker.id)} selected={props.selectedIds.includes(marker.id)} theme={props.theme} view={props.view} labelScale={props.labelScale} showName={props.showNames && marker.kind !== "goal"} onPointerDown={(id, additive) => { if (props.tool === "select") dragging.current = id; props.onSelect(id, additive); }} />)}
+    {props.markers.map(marker => <Marker key={marker.id} marker={marker} animatedPosition={animatedMarkerPositions.get(marker.id)} selected={props.selectedIds.includes(marker.id)} theme={props.theme} view={props.view} labelScale={props.labelScale} showName={props.showNames && marker.kind !== "goal"} interactive={props.interactive !== false && ["select", "erase", "pass", "run", "dribble", "shot"].includes(props.tool)} onPointerDown={(id, additive) => { if (props.tool === "select") dragging.current = id; props.onSelect(id, additive); }} />)}
     {editingText && <TextEditorTracker item={editingText} inputRef={props.editingInputRef} orientation={props.pitchOrientation} />}</group><CameraControls view={props.view} pitchPreset={props.pitchPreset} pitchOrientation={props.pitchOrientation} zoomScale={props.zoomScale} resetSignal={props.resetSignal} onZoomChange={props.onZoomChange} />
   </>;
 }

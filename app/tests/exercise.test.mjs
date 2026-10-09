@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getExerciseImageHeight, getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
 import { exerciseDraftContentKey } from "../src/features/exercises/exerciseStorage.ts";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseAnnotationPoints, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
@@ -215,4 +215,45 @@ test("applies playback speed once and stops at the timeline end", () => {
   assert.deepEqual(getExerciseTimelineProgress(600, 1, entry, 2000), { active: false, progress: 0 });
   assert.deepEqual(getExerciseTimelineProgress(2600, 1, entry, 2000), { active: false, progress: 0 });
   assert.deepEqual(getExerciseTimelineProgressAt(1200, entry, 2000), { active: true, progress: .4 });
+});
+
+
+test("keeps every corner of a long narrow rectangle in either drawing direction", () => {
+  for (const points of [[{ x: 0, z: 0 }, { x: 4, z: 1 }], [{ x: 4, z: 1 }, { x: 0, z: 0 }]]) {
+    const outline = getExerciseAnnotationPoints({ id: "rect", kind: "rectangle", color: "#fff", points });
+    assert.equal(outline.length, 5);
+    assert.deepEqual(outline[0], outline[4]);
+    for (let i = 1; i < outline.length; i++) {
+      assert.ok(outline[i].x === outline[i - 1].x || outline[i].z === outline[i - 1].z);
+      assert.ok(Math.hypot(outline[i].x - outline[i - 1].x, outline[i].z - outline[i - 1].z) > 0);
+    }
+  }
+});
+
+test("samples a smooth closed ellipse without leaving its bounds", () => {
+  const outline = getExerciseAnnotationPoints({ id: "circle", kind: "circle", color: "#fff", points: [{ x: 1, z: 2 }, { x: 4, z: 3 }] });
+  assert.equal(outline.length, 97);
+  for (const point of outline) assert.ok(Math.abs(((point.x - 1) / 3) ** 2 + (point.z - 2) ** 2 - 1) < 1e-10);
+  assert.ok(Math.hypot(outline[0].x - outline.at(-1).x, outline[0].z - outline.at(-1).z) < 1e-10);
+});
+
+
+test("removes a layer and only the routes linked to its marker", () => {
+  const content = { ...draft, markers: [player("blue"), player("red"), ball], paths: [
+    { id: "linked-start", kind: "run", fromId: "blue", toPoint: { x: 2, z: 2 } },
+    { id: "linked-end", kind: "pass", fromId: "ball", toId: "blue" },
+    { id: "unrelated", kind: "run", fromId: "red", toPoint: { x: 3, z: 1 } },
+  ], annotations: [{ id: "rectangle", kind: "rectangle", color: "#fff", points: [{ x: 0, z: 0 }, { x: 1, z: 1 }] }] };
+  const result = removeExerciseLayer(content, "marker", "blue");
+  assert.deepEqual(result.markers.map(item => item.id), ["red", "ball"]);
+  assert.deepEqual(result.paths.map(item => item.id), ["unrelated"]);
+  assert.equal(result.annotations, content.annotations);
+  assert.equal(content.markers.length, 3);
+  assert.equal(removeExerciseLayer(content, "marker", "missing"), content);
+  const withoutPath = removeExerciseLayer(content, "path", "linked-end");
+  assert.equal(withoutPath.paths.length, 2);
+  assert.equal(withoutPath.markers, content.markers);
+  const withoutShape = removeExerciseLayer(content, "annotation", "rectangle");
+  assert.equal(withoutShape.annotations.length, 0);
+  assert.equal(withoutShape.paths, content.paths);
 });

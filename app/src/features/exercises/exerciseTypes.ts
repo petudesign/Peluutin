@@ -4,7 +4,7 @@ export type ExercisePlayerRole = "goalkeeper" | "defender" | "midfielder" | "att
 export type ExerciseGoalSize = "small" | "youth" | "full";
 export type ExercisePitchPreset = "training" | "full";
 export type ExercisePitchOrientation = "landscape" | "portrait";
-export type ExercisePitchStyle = "dark" | "grass";
+export type ExercisePitchStyle = "dark" | "grass" | "plain-grass";
 
 export const EXERCISE_PITCH_DIMENSIONS: Record<ExercisePitchPreset, { length: number; width: number; groundLength: number; groundWidth: number }> = {
   training: { length: 11.5, width: 7.5, groundLength: 13, groundWidth: 8.8 },
@@ -63,6 +63,20 @@ export interface ExerciseAnnotation {
   points: Array<{ x: number; z: number }>;
 }
 
+export function getExerciseAnnotationPoints(item: ExerciseAnnotation): Array<{ x: number; z: number }> {
+  const first = item.points[0], last = item.points.at(-1);
+  if (!first || !last) return [];
+  if (item.kind === "rectangle") return [first, { x: last.x, z: first.z }, last, { x: first.x, z: last.z }, first];
+  if (item.kind === "circle") {
+    const radiusX = Math.abs(last.x - first.x), radiusZ = Math.abs(last.z - first.z);
+    return Array.from({ length: 97 }, (_, index) => {
+      const angle = index / 96 * Math.PI * 2;
+      return { x: first.x + Math.cos(angle) * radiusX, z: first.z + Math.sin(angle) * radiusZ };
+    });
+  }
+  return item.points;
+}
+
 export interface ExerciseDraft {
   name: string;
   notes: string;
@@ -77,6 +91,17 @@ export interface ExerciseDraft {
   pitchOrientation: ExercisePitchOrientation;
   pitchStyle: ExercisePitchStyle;
   updatedAt: string;
+}
+
+export type ExerciseLayerKind = "marker" | "path" | "annotation";
+
+export function removeExerciseLayer(draft: ExerciseDraft, kind: ExerciseLayerKind, id: string): ExerciseDraft {
+  if (kind === "marker") {
+    if (!draft.markers.some(marker => marker.id === id)) return draft;
+    return { ...draft, markers: draft.markers.filter(marker => marker.id !== id), paths: draft.paths.filter(path => path.fromId !== id && path.toId !== id) };
+  }
+  if (kind === "path") return draft.paths.some(path => path.id === id) ? { ...draft, paths: draft.paths.filter(path => path.id !== id) } : draft;
+  return draft.annotations.some(item => item.id === id) ? { ...draft, annotations: draft.annotations.filter(item => item.id !== id) } : draft;
 }
 
 export function resizeExerciseDraftContent(draft: ExerciseDraft, nextPreset: ExercisePitchPreset): ExerciseDraft {
