@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getExerciseImageHeight, getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
 import { exerciseDraftContentKey } from "../src/features/exercises/exerciseStorage.ts";
-import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseAnnotationPoints, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
+import { buildExerciseTimeline, canAddTeamPlayer, canPassBetween, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_NATURAL_SPEEDS, EXERCISE_PITCH_DIMENSIONS, EXERCISE_ROLE_OPTIONS, formatRouteCount, getExercise2dFitZoom, getExerciseAnnotationPoints, exerciseAnnotationIntersectsBox, getExerciseMarkerColor, getExercisePathColor, getExercisePathDurationMs, getExercisePathNaturalDurationMs, getExerciseTimelineProgress, getExerciseTimelineProgressAt, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs } from "../src/features/exercises/exerciseTypes.ts";
 
 const player = (team) => ({ id: team, kind: "player", team, name: team, x: 0, z: 0 });
 const ball = { id: "ball", kind: "ball", name: "Pallo", x: 0, z: 0 };
@@ -40,9 +40,9 @@ test("sizes the exercise image to its visible content", () => {
   assert.equal(getExerciseImageHeight(788, 988, true), 2218);
 });
 
-test("allows passes within a team or via a ball, but not to an opponent", () => {
+test("allows passes to any player or ball, while excluding equipment", () => {
   assert.equal(canPassBetween(player("blue"), player("blue")), true);
-  assert.equal(canPassBetween(player("blue"), player("red")), false);
+  assert.equal(canPassBetween(player("blue"), player("red")), true);
   assert.equal(canPassBetween(player("blue"), ball), true);
   assert.equal(canPassBetween(player("blue"), { id: "cone", kind: "cone", name: "Tötsä", x: 1, z: 1 }), false);
 });
@@ -119,10 +119,10 @@ test("moves a marker selection as one group and keeps it inside the pitch", () =
   assert.deepEqual([clamped[1].x - clamped[0].x, clamped[1].z - clamped[0].z], [1, 1]);
 });
 
-test("accepts free run targets but keeps passes attached to markers", () => {
+test("accepts free targets for runs, passes, dribbles and shots", () => {
   const markers = [player("blue"), player("red")];
   assert.equal(isExercisePathValid({ id: "run", kind: "run", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
-  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), false);
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
   assert.equal(isExercisePathValid({ id: "dribble", kind: "dribble", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
   assert.equal(isExercisePathValid({ id: "shot", kind: "shot", fromId: "blue", toPoint: { x: 2, z: 1 } }, markers), true);
   const goal = { id: "goal", kind: "goal", name: "Maali", goalSize: "youth", x: 3, z: 0 };
@@ -256,4 +256,38 @@ test("removes a layer and only the routes linked to its marker", () => {
   const withoutShape = removeExerciseLayer(content, "annotation", "rectangle");
   assert.equal(withoutShape.annotations.length, 0);
   assert.equal(withoutShape.paths, content.paths);
+});
+
+
+test("marquee selects shape edges and crossing strokes without selecting empty interiors", () => {
+  const rectangle = { id: "rect", kind: "rectangle", color: "#fff", points: [{ x: 0, z: 0 }, { x: 4, z: 4 }] };
+  assert.equal(exerciseAnnotationIntersectsBox(rectangle, { left: -1, right: 5, top: -1, bottom: 5 }), true);
+  assert.equal(exerciseAnnotationIntersectsBox(rectangle, { left: 1, right: 2, top: -.1, bottom: .1 }), true);
+  assert.equal(exerciseAnnotationIntersectsBox(rectangle, { left: 1, right: 2, top: 1, bottom: 2 }), false);
+  const line = { ...rectangle, kind: "line", points: [{ x: -2, z: -2 }, { x: 2, z: 2 }] };
+  assert.equal(exerciseAnnotationIntersectsBox(line, { left: -.5, right: .5, top: -.5, bottom: .5 }), true);
+  assert.equal(exerciseAnnotationIntersectsBox(line, { left: -2, right: -1, top: 1, bottom: 2 }), false);
+  const circle = { ...rectangle, kind: "circle", points: [{ x: 0, z: 0 }, { x: 2, z: 2 }] };
+  assert.equal(exerciseAnnotationIntersectsBox(circle, { left: -.2, right: .2, top: -.2, bottom: .2 }), false);
+  assert.equal(exerciseAnnotationIntersectsBox(circle, { left: 1.9, right: 2.1, top: -.2, bottom: .2 }), true);
+});
+
+
+test("validates passes to opponents and finite open space while rejecting invalid sources", () => {
+  const markers = [player("blue"), player("red"), ball, { id: "cone", kind: "cone", name: "Tötsä", x: 1, z: 1 }];
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toId: "red" }, markers), true);
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "ball", toPoint: { x: 3, z: 2 } }, markers), true);
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "cone", toPoint: { x: 3, z: 2 } }, markers), false);
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: NaN, z: 2 } }, markers), false);
+  assert.equal(isExercisePathValid({ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: 3, z: Infinity } }, markers), false);
+});
+
+test("plays a pass into open space alongside a runner targeting the same location", () => {
+  const markers = [{ ...player("blue"), x: -2, z: 0 }, { ...player("red"), x: 0, z: -2 }];
+  const paths = [{ id: "pass", kind: "pass", fromId: "blue", toPoint: { x: 1, z: 1 }, startMs: 0 }, { id: "run", kind: "run", fromId: "red", toPoint: { x: 1, z: 1 }, startMs: 0 }];
+  for (const path of paths) assert.equal(isExercisePathValid(path, markers), true);
+  const timeline = buildExerciseTimeline(paths, markers);
+  assert.equal(timeline.entries.length, 2);
+  assert.ok(timeline.entries.every(entry => entry.startMs === 0 && entry.durationMs > 0));
+  assert.ok(timeline.entries.find(entry => entry.pathId === "pass").durationMs < timeline.entries.find(entry => entry.pathId === "run").durationMs);
 });

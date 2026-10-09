@@ -77,6 +77,21 @@ export function getExerciseAnnotationPoints(item: ExerciseAnnotation): Array<{ x
   return item.points;
 }
 
+export function exerciseAnnotationIntersectsBox(item: ExerciseAnnotation, box: { left: number; right: number; top: number; bottom: number }): boolean {
+  const points = getExerciseAnnotationPoints(item);
+  if (points.some(point => point.x >= box.left && point.x <= box.right && point.z >= box.top && point.z <= box.bottom)) return true;
+  for (let index = 1; index < points.length; index++) {
+    const start = points[index - 1], end = points[index];
+    let min = 0, max = 1;
+    for (const [origin, delta, low, high] of [[start.x, end.x - start.x, box.left, box.right], [start.z, end.z - start.z, box.top, box.bottom]]) {
+      if (Math.abs(delta) < 1e-10) { if (origin < low || origin > high) { max = -1; break; } }
+      else { const a = (low - origin) / delta, b = (high - origin) / delta; min = Math.max(min, Math.min(a, b)); max = Math.min(max, Math.max(a, b)); }
+    }
+    if (min <= max) return true;
+  }
+  return false;
+}
+
 export interface ExerciseDraft {
   name: string;
   notes: string;
@@ -165,7 +180,7 @@ export function canTargetExercisePath(kind: ExercisePath["kind"], from: Exercise
 
 export function canPassBetween(from: ExerciseMarker, to: ExerciseMarker) {
   if (!["player", "ball"].includes(from.kind) || !["player", "ball"].includes(to.kind)) return false;
-  return from.kind === "ball" || to.kind === "ball" || from.team === to.team;
+  return true;
 }
 
 export function createExerciseMarkerCopy(markers: ExerciseMarker[], source: ExerciseMarker, sequence: number, id: string) {
@@ -189,12 +204,12 @@ export function formatRouteCount(count: number) {
 
 export function isExercisePathValid(path: ExercisePath, markers: ExerciseMarker[]) {
   const from = markers.find((marker) => marker.id === path.fromId);
-  if (!from) return false;
+  if (!from || (from.kind !== "player" && from.kind !== "ball")) return false;
   if (path.toId) {
     const to = markers.find((marker) => marker.id === path.toId);
     return Boolean(to && canTargetExercisePath(path.kind, from, to));
   }
-  return path.kind !== "pass" && Number.isFinite(path.toPoint?.x) && Number.isFinite(path.toPoint?.z);
+  return Number.isFinite(path.toPoint?.x) && Number.isFinite(path.toPoint?.z);
 }
 
 const FIELD_METERS_PER_UNIT = 8.75;

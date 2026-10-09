@@ -5,7 +5,7 @@ interface ExerciseLayersPanelProps {
   draft: ExerciseDraft;
   selectedMarkerIds: string[];
   selectedPathId: string | null;
-  selectedAnnotationId: string | null;
+  selectedAnnotationIds: string[];
   onSelect: (kind: ExerciseLayerKind, id: string) => void;
   onRemove: (kind: ExerciseLayerKind, id: string) => void;
   onClose: () => void;
@@ -14,7 +14,7 @@ interface ExerciseLayersPanelProps {
 const shapeNames = { draw: "Vapaa piirto", line: "Viiva", rectangle: "Suorakulmio", circle: "Ympyrä", text: "Teksti" };
 const routeNames = { pass: "Syöttö", run: "Juoksu", dribble: "Kuljetus", shot: "Veto" };
 
-export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, selectedAnnotationId, onSelect, onRemove, onClose }: ExerciseLayersPanelProps) {
+export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, selectedAnnotationIds, onSelect, onRemove, onClose }: ExerciseLayersPanelProps) {
   const counts = new Map<string, number>();
   const numbered = (kind: string, label: string) => {
     const number = (counts.get(kind) || 0) + 1;
@@ -45,7 +45,7 @@ export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, 
       items: draft.annotations.map(item => ({
         id: item.id, name: numbered(item.kind, shapeNames[item.kind]),
         detail: item.kind === "text" ? (item.text || "Tyhjä teksti") : "Piirros",
-        Icon: item.kind === "text" ? Type : Shapes, selected: selectedAnnotationId === item.id,
+        Icon: item.kind === "text" ? Type : Shapes, selected: selectedAnnotationIds.includes(item.id),
       })),
     },
   ];
