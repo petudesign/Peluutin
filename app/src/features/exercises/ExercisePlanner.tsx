@@ -13,11 +13,12 @@ type ToolMenu = "player" | "element" | "pitch" | "route" | "shape" | null;
 
 const TOOL_SIDE_KEY = "peluutin-exercise-tool-side";
 const HIDE_NAMES_KEY = "peluutin-exercise-hide-names";
-const DRAW_TOOLS: ExerciseTool[] = ["draw", "line", "rectangle", "circle"];
+const DRAW_TOOLS: ExerciseTool[] = ["draw", "line", "arrow", "rectangle", "circle"];
 const DRAW_COLORS = ["#f6b323", "#f25f54", "#4c9ee8", "#45b77b", "#ffffff"];
 const SHAPE_ITEMS: Array<{ tool: ExerciseTool; label: string; icon: typeof Pencil }> = [
   { tool: "draw", label: "Vapaa piirto", icon: Pencil },
   { tool: "line", label: "Suora viiva", icon: Slash },
+  { tool: "arrow", label: "Nuoli", icon: ArrowRight },
   { tool: "rectangle", label: "Suorakulmio", icon: Square },
   { tool: "circle", label: "Ympyrä", icon: Circle },
 ];

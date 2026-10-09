@@ -11,7 +11,7 @@ interface ExerciseLayersPanelProps {
   onClose: () => void;
 }
 
-const shapeNames = { draw: "Vapaa piirto", line: "Viiva", rectangle: "Suorakulmio", circle: "Ympyrä", text: "Teksti" };
+const shapeNames = { draw: "Vapaa piirto", line: "Viiva", arrow: "Nuoli", rectangle: "Suorakulmio", circle: "Ympyrä", text: "Teksti" };
 const routeNames = { pass: "Syöttö", run: "Juoksu", dribble: "Kuljetus", shot: "Veto" };
 
 export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, selectedAnnotationIds, onSelect, onRemove, onClose }: ExerciseLayersPanelProps) {

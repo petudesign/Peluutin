@@ -231,6 +231,20 @@ function Annotation({ item, erase, editing, selected, theme, interactive, onEras
 function createAnnotationStrokeGeometry(item: ExerciseAnnotation, halfWidth: number) {
     const points = getExerciseAnnotationPoints(item).filter((point, index, all) => index === 0 || Math.hypot(point.x - all[index - 1].x, point.z - all[index - 1].z) > .0001);
     const vertices: number[] = [], indices: number[] = [];
+    if (item.kind === "arrow") {
+      // Independent strips keep the arrowhead joins stable in every direction.
+      points.slice(1).forEach((end, index) => {
+        const start = points[index], dx = end.x - start.x, dz = end.z - start.z, length = Math.hypot(dx, dz);
+        if (length < .0001) return;
+        const nx = -dz / length * halfWidth, nz = dx / length * halfWidth, n = vertices.length / 3;
+        vertices.push(start.x + nx, .018, start.z + nz, start.x - nx, .018, start.z - nz,
+          end.x + nx, .018, end.z + nz, end.x - nx, .018, end.z - nz);
+        indices.push(n, n + 1, n + 2, n + 1, n + 3, n + 2);
+      });
+      const result = new THREE.BufferGeometry();
+      result.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3)); result.setIndex(indices);
+      return result;
+    }
     const closed = points.length > 2 && Math.hypot(points[0].x - points.at(-1)!.x, points[0].z - points.at(-1)!.z) < .0001;
     points.forEach((point, index) => {
       const before = points[index - 1] ?? (closed ? points.at(-2)! : point);
@@ -298,7 +312,7 @@ function Scene(props: ExerciseCanvasProps & { editingInputRef: RefObject<HTMLInp
       return;
     }
     if (phase === "up") dragging.current = null;
-    if (["draw", "line", "rectangle", "circle"].includes(props.tool)) {
+    if (["draw", "line", "arrow", "rectangle", "circle"].includes(props.tool)) {
       const target = event.target as unknown as PointerCaptureTarget;
       if (phase === "down") target.setPointerCapture(event.pointerId);
       if (phase === "up") target.releasePointerCapture(event.pointerId);

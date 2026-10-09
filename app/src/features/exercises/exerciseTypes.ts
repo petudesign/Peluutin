@@ -1,5 +1,5 @@
 export type ExerciseView = "2d" | "3d";
-export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "tall-cone" | "bench" | "ladder" | "dummy" | "goal-small" | "goal-youth" | "goal-full" | "pass" | "run" | "dribble" | "shot" | "text" | "draw" | "line" | "rectangle" | "circle" | "erase";
+export type ExerciseTool = "select" | "player-blue" | "player-red" | "ball" | "cone" | "tall-cone" | "bench" | "ladder" | "dummy" | "goal-small" | "goal-youth" | "goal-full" | "pass" | "run" | "dribble" | "shot" | "text" | "draw" | "line" | "arrow" | "rectangle" | "circle" | "erase";
 export type ExercisePlayerRole = "goalkeeper" | "defender" | "midfielder" | "attacker";
 export type ExerciseGoalSize = "small" | "youth" | "full";
 export type ExercisePitchPreset = "training" | "full";
@@ -59,7 +59,7 @@ export interface ExerciseTimelineEntry {
 
 export interface ExerciseAnnotation {
   id: string;
-  kind: "text" | "draw" | "line" | "rectangle" | "circle";
+  kind: "text" | "draw" | "line" | "arrow" | "rectangle" | "circle";
   color: string;
   width?: 1 | 2 | 3;
   text?: string;
@@ -69,6 +69,15 @@ export interface ExerciseAnnotation {
 export function getExerciseAnnotationPoints(item: ExerciseAnnotation): Array<{ x: number; z: number }> {
   const first = item.points[0], last = item.points.at(-1);
   if (!first || !last) return [];
+  if (item.kind === "arrow") {
+    const dx = last.x - first.x, dz = last.z - first.z, length = Math.hypot(dx, dz);
+    if (length < .0001) return [first, last];
+    const ux = dx / length, uz = dz / length, head = Math.min(.4, length * .3);
+    return [first, last,
+      { x: last.x - ux * head - uz * head * .55, z: last.z - uz * head + ux * head * .55 },
+      last,
+      { x: last.x - ux * head + uz * head * .55, z: last.z - uz * head - ux * head * .55 }];
+  }
   if (item.kind === "rectangle") return [first, { x: last.x, z: first.z }, last, { x: first.x, z: last.z }, first];
   if (item.kind === "circle") {
     const radiusX = Math.abs(last.x - first.x), radiusZ = Math.abs(last.z - first.z);

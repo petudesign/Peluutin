@@ -338,3 +338,18 @@ test("resolves actions during curved movement from the actual playback position"
   assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 2000), entries[1].from);
   assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 5000), run.toPoint);
 });
+
+test("draws selectable arrowheads at the drag endpoint in either direction", () => {
+  for (const end of [{ x: 2, z: 0 }, { x: -2, z: 0 }, { x: 0, z: 2 }, { x: 1, z: -1 }]) {
+    const arrow = { id: "arrow", kind: "arrow", color: "#fff", points: [{ x: 0, z: 0 }, end] };
+    const points = getExerciseAnnotationPoints(arrow);
+    assert.equal(points.length, 5);
+    assert.deepEqual(points[1], end);
+    assert.deepEqual(points[3], end);
+    const wing = points[2];
+    assert.ok((wing.x - end.x) * end.x + (wing.z - end.z) * end.z < 0);
+    assert.equal(exerciseAnnotationIntersectsBox(arrow, { left: wing.x - .01, right: wing.x + .01, top: wing.z - .01, bottom: wing.z + .01 }), true);
+  }
+  const zero = { id: "arrow", kind: "arrow", points: [{ x: 0, z: 0 }, { x: 0, z: 0 }] };
+  assert.ok(getExerciseAnnotationPoints(zero).every(point => Number.isFinite(point.x) && Number.isFinite(point.z)));
+});
