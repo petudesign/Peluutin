@@ -2588,3 +2588,10 @@ button:active:not(:disabled) {
 [data-theme="light"] .exercise-layer-select:hover { background:rgba(22,67,88,.06); }
 [data-theme="light"] .exercise-layer-delete:hover { color:#b93f35; background:rgba(185,63,53,.09); }
 @media (max-width:1080px) { .exercise-layers-panel { left:10px; width:238px; } .exercise-tools-left .exercise-layers-panel { right:10px; } }
+
+.exercise-share-menu { width:240px; }
+.exercise-share-names { display:flex; align-items:center; gap:8px; padding:9px 10px; color:#dce7eb; font:750 10px/1.4 "Manrope"; cursor:pointer; }
+.exercise-share-names input { width:16px; height:16px; flex-shrink:0; accent-color:#1769aa; }
+.exercise-share-note { margin:0 10px 6px; color:#a3b9c2; font:500 10px/1.4 "DM Sans"; }
+[data-theme="light"] .exercise-share-names { color:#365866; }
+[data-theme="light"] .exercise-share-note { color:#607984; }

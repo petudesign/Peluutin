@@ -1,3 +1,4 @@
+import { createExerciseShareDraft } from "../src/features/exercises/exerciseSharing.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getExerciseImageHeight, getExerciseImageSections } from "../src/features/exercises/exerciseImageExport.ts";
@@ -337,6 +338,21 @@ test("resolves actions during curved movement from the actual playback position"
   assert.deepEqual(entries[1].from, { x: 1, z: .38 });
   assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 2000), entries[1].from);
   assert.deepEqual(getExerciseMarkerPositionAt(runner, paths, entries, 5000), run.toPoint);
+});
+
+
+test("removes player names from shared data by default without changing the local exercise", () => {
+  const source = { ...draft, markers: [{ ...player("blue"), name: "Aino", number: 7 }, { ...ball, name: "Pallo" }], paths: [{ id: "pass", fromId: "blue", toId: "ball", kind: "pass" }] };
+  const shared = createExerciseShareDraft(source);
+  assert.equal(shared.markers[0].name, "Pelaaja 1");
+  assert.equal(shared.markers[0].number, undefined);
+  assert.equal(source.markers[0].number, 7);
+  assert.equal(shared.markers[1].name, "Pallo");
+  assert.equal(source.markers[0].name, "Aino");
+  assert.equal(JSON.stringify(shared).includes("Aino"), false);
+  assert.deepEqual(shared.paths, source.paths);
+  assert.equal(shared.notes, source.notes);
+  assert.equal(createExerciseShareDraft(source, false).markers[0].name, "Aino");
 });
 
 test("draws selectable arrowheads at the drag endpoint in either direction", () => {
