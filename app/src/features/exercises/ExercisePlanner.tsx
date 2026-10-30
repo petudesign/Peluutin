@@ -299,7 +299,8 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
     const up = () => setTimelineDrag(null);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up, { once: true });
-    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointercancel", up, { once: true });
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
   }, [timelineDrag, timelineLanes.length, timelineWindowMs, updateDraft]);
 
   useEffect(() => {
@@ -314,7 +315,8 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
     const up = () => setTimelineTrim(null);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up, { once: true });
-    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointercancel", up, { once: true });
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
   }, [timelineTrim, timelineWindowMs, updateDraft]);
 
   const seekTimeline = useCallback((clientX: number) => {
@@ -330,7 +332,8 @@ export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleT
     const up = () => setScrubbing(false);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up, { once: true });
-    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointercancel", up, { once: true });
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
   }, [scrubbing, seekTimeline]);
 
   useEffect(() => {

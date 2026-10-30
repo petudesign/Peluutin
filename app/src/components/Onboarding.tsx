@@ -30,6 +30,9 @@ export function Onboarding({ teamName, onTeamNameChange, onCreateTeam, sport, on
           <span>Joukkueen nimi</span>
           <input
             autoFocus
+            autoCapitalize="words"
+            autoComplete="off"
+            enterKeyHint="next"
             maxLength={NAME_MAX_LENGTH}
             value={teamName}
             onChange={(event) => onTeamNameChange(event.target.value)}

@@ -95,6 +95,9 @@ export function SettingsDialog(props: SettingsDialogProps) {
                     {isActive && isEditingTeamName ? (
                       <input
                         className="team-name-input"
+                        autoCapitalize="words"
+                        autoComplete="off"
+                        enterKeyHint="done"
                         maxLength={NAME_MAX_LENGTH}
                         value={teamNameDraft}
                         onChange={(event) => onTeamNameDraftChange(event.target.value)}
@@ -141,7 +144,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
               })}
             </div>
             <div className="add-row">
-              <input maxLength={NAME_MAX_LENGTH} value={newTeamName} onChange={(event) => onNewTeamNameChange(event.target.value)} placeholder="Esim. Testijoukkue FC" />
+              <input autoCapitalize="words" autoComplete="off" maxLength={NAME_MAX_LENGTH} value={newTeamName} onChange={(event) => onNewTeamNameChange(event.target.value)} placeholder="Esim. Testijoukkue FC" />
               <button className="button-add" onClick={onAddTeam}>Lisää</button>
             </div>
           </aside>
@@ -149,9 +152,9 @@ export function SettingsDialog(props: SettingsDialogProps) {
             <div className="player-editor-list">
               {roster.map((player) => (
                 <div className="player-editor" key={player.id}>
-                  <input type="number" min="0" max="99" aria-label={`${player.name} pelinumero`} value={player.number}
+                  <input type="number" inputMode="numeric" min="0" max="99" aria-label={`${player.name} pelinumero`} value={player.number}
                     onChange={(event) => onUpdatePlayerNumber(player.id, Number(event.target.value) || 0)} />
-                  <input maxLength={NAME_MAX_LENGTH} aria-label={`${player.name} nimi`} value={player.name}
+                  <input autoCapitalize="words" autoComplete="off" maxLength={NAME_MAX_LENGTH} aria-label={`${player.name} nimi`} value={player.name}
                     onChange={(event) => onUpdatePlayerName(player.id, event.target.value)} />
                   <button className="delete-icon-button" onClick={() => onRemovePlayer(player.id)} aria-label={`Poista ${player.name}`} title={`Poista ${player.name}`}>
                     <Trash2 size={17} aria-hidden="true" />
@@ -160,7 +163,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
               ))}
             </div>
             <div className="add-row player-add">
-              <input maxLength={NAME_MAX_LENGTH} value={newPlayerName} onChange={(event) => onNewPlayerNameChange(event.target.value)} placeholder="Esim. Erkki" />
+              <input autoCapitalize="words" autoComplete="off" maxLength={NAME_MAX_LENGTH} value={newPlayerName} onChange={(event) => onNewPlayerNameChange(event.target.value)} placeholder="Esim. Erkki" />
               <button className="button-add" onClick={onAddPlayer}>Lisää pelaaja</button>
             </div>
 

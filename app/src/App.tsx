@@ -142,6 +142,13 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
+    const color = activeFeature === "exercises"
+      ? (theme === "dark" ? "#081217" : "#e7edef")
+      : (theme === "dark" ? "#0d1c25" : "#fbfcfb");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
+  }, [activeFeature, theme]);
+
+  useEffect(() => {
     document.title = `Peluutin – ${activeFeature === "exercises" ? "Harjoitteet" : "Ottelut"}`;
   }, [activeFeature]);
 

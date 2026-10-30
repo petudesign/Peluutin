@@ -79,7 +79,7 @@ export function FieldUnitsEditor({ players, fieldUnits, onAdd, onUpdate, onRemov
         ))}
       </div>
       <div className="add-row field-unit-add-row">
-        <input maxLength={NAME_MAX_LENGTH} value={name} onChange={(event) => setName(event.target.value)} placeholder="Esim. Ykköskentällinen" />
+        <input autoCapitalize="words" autoComplete="off" maxLength={NAME_MAX_LENGTH} value={name} onChange={(event) => setName(event.target.value)} placeholder="Esim. Ykköskentällinen" />
         <button className="button-add" type="button" disabled={!normalizedName || !playerIds.length || duplicateName} onClick={saveUnit}>{editingId ? "Tallenna" : "Lisää kentällinen"} ({playerIds.length}/5)</button>
       </div>
       {editingId ? <button className="field-unit-cancel" type="button" onClick={cancelEdit}>Peru muokkaus</button> : null}

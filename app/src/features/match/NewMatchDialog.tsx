@@ -140,6 +140,8 @@ export function NewMatchDialog({
               <span>Vastustaja</span>
               <input
                 autoFocus
+                autoCapitalize="words"
+                autoComplete="off"
                 maxLength={NAME_MAX_LENGTH}
                 value={opponent}
                 onChange={(event) => onOpponentChange(event.target.value)}

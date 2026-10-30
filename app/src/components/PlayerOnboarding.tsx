@@ -57,6 +57,9 @@ export function PlayerOnboarding({
             <input
               id="onboarding-player-name"
               autoFocus
+              autoCapitalize="words"
+              autoComplete="off"
+              enterKeyHint="done"
               maxLength={NAME_MAX_LENGTH}
               value={playerName}
               onChange={(event) => onPlayerNameChange(event.target.value)}
