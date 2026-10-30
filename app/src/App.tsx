@@ -62,6 +62,7 @@ export function App() {
   const [appSettingsReturnToTeams, setAppSettingsReturnToTeams] = useState(false);
   const [settingsTeamId, setSettingsTeamId] = useState(initialTeam?.id || "");
   const [newMatchOpen, setNewMatchOpen] = useState(false);
+  const [newMatchTeamId, setNewMatchTeamId] = useState("");
   const [gamesOpen, setGamesOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [endMatchOpen, setEndMatchOpen] = useState(false);
@@ -114,6 +115,12 @@ export function App() {
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
   const settingsFormations = (settingsTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5).map((item) => ({
+    ...item,
+    slots: createFormation(item.name, item.teamSize) || item.slots,
+  }));
+  // The dialog's team is only a draft: the current match stays untouched until a new one is actually created.
+  const newMatchTeam = sportTeams.find((team) => team.id === newMatchTeamId) || homeTeam;
+  const newMatchFormations = (newMatchTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5).map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
@@ -281,7 +288,10 @@ export function App() {
 
   const openTeamSettings = () => {
     const nextTeam = teams.find((item) => item.id === settingsTeamId) || homeTeam;
-    if (!nextTeam) return;
+    if (nextTeam) openSettingsForTeam(nextTeam);
+  };
+
+  const openSettingsForTeam = (nextTeam: Team) => {
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
     setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : matchCreated && nextTeam.id === teamId ? activeFormation?.teamSize || 8 : 8);
@@ -428,8 +438,8 @@ export function App() {
     if (settingsTeamId === teamId) {
       setMinutes((current) => ({ ...current, [player.id]: 0 }));
       setActivePlayerIds((current) => current.includes(player.id) ? current : [...current, player.id]);
-      if (newMatchOpen) setActivePlayerDraft((current) => [...current, player.id]);
     }
+    if (newMatchOpen && settingsTeamId === newMatchTeam?.id) setActivePlayerDraft((current) => [...current, player.id]);
     setNewPlayerName("");
   };
 
@@ -626,7 +636,13 @@ export function App() {
     }
   };
 
+  const selectNewMatchTeam = (team: Team) => {
+    setNewMatchTeamId(team.id);
+    setActivePlayerDraft(team.players.map((player) => player.id));
+  };
+
   const openNewMatch = () => {
+    setNewMatchTeamId(teamId);
     setOpponentDraft(opponent);
     setVenueDraft(venue);
     setActivePlayerDraft(roster.map((player) => player.id));
@@ -641,7 +657,11 @@ export function App() {
 
   const createMatch = (formationId: string, startingLineup: PlayerId[]) => {
     const nextOpponent = cleanName(opponentDraft);
-    if (!nextOpponent || (matchCreated && !matchEnded && matchHasActivity)) return;
+    if (!nextOpponent || !newMatchTeam || (matchCreated && !matchEnded && matchHasActivity)) return;
+    const teamChanged = newMatchTeam.id !== teamId;
+    setTeamId(newMatchTeam.id);
+    setHistoryTeamId(newMatchTeam.id);
+    setTeamNameDraft(newMatchTeam.name);
     setOpponent(nextOpponent);
     setVenue(venueDraft);
     setActivePlayerIds(activePlayerDraft);
@@ -649,14 +669,14 @@ export function App() {
     setLineup(startingLineup);
     setSeconds(0);
     setScore([0, 0]);
-    setMinutes(Object.fromEntries(roster.map((player) => [player.id, 0])));
+    setMinutes(Object.fromEntries(newMatchTeam.players.map((player) => [player.id, 0])));
     setGoals({});
     clearPlayerSelection();
     setRunning(false);
     setStartedAt(undefined);
     setMatchEnded(false);
     setMatchCreated(true);
-    setActiveScheduledMatchId(activeScheduledMatchId);
+    setActiveScheduledMatchId(teamChanged ? undefined : activeScheduledMatchId);
     setHistoryNotice("");
     setNewMatchOpen(false);
     analytics.track("match_created", { source: "new" });
@@ -664,11 +684,11 @@ export function App() {
 
   const scheduleMatch = (scheduledAt: string, formationId: string, startingLineup: PlayerId[]) => {
     const nextOpponent = cleanName(opponentDraft);
-    if (!nextOpponent || !homeTeam || scheduledStartError(new Date(scheduledAt), homeTeam.id, scheduledMatches)) return;
+    if (!nextOpponent || !newMatchTeam || scheduledStartError(new Date(scheduledAt), newMatchTeam.id, scheduledMatches)) return;
     const scheduled: ScheduledMatch = {
       id: `scheduled-${Date.now()}`,
       scheduledAt,
-      teamId: homeTeam.id,
+      teamId: newMatchTeam.id,
       opponent: nextOpponent,
       venue: venueDraft,
       formation: formationId,
@@ -872,20 +892,20 @@ export function App() {
       {newMatchOpen && (
         <NewMatchDialog
           teams={sportTeams}
-          teamId={teamId}
+          teamId={newMatchTeam?.id || teamId}
           opponent={opponentDraft}
           venue={venueDraft}
           activePlayerIds={activePlayerDraft}
-          roster={roster}
-          formations={teamFormations}
+          roster={newMatchTeam?.players || []}
+          formations={newMatchFormations}
           initialFormationId={formation}
           scheduledMatches={scheduledMatches}
           canStartNow={!matchCreated || matchEnded || !matchHasActivity}
-          onSelectTeam={activateTeam}
+          onSelectTeam={selectNewMatchTeam}
           onOpponentChange={setOpponentDraft}
           onVenueChange={setVenueDraft}
           onActivePlayerIdsChange={setActivePlayerDraft}
-          onAddPlayers={openTeamSettings}
+          onAddPlayers={() => { if (newMatchTeam) openSettingsForTeam(newMatchTeam); }}
           onCreate={createMatch}
           onSchedule={scheduleMatch}
           onClose={() => setNewMatchOpen(false)}
