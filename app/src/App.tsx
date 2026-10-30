@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
-import { createFormation, reorderLineup } from "./formation.js";
+import { createFormation, reorderLineup, preferredFormation } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
 import type { ActiveMatch, Formation, MatchRecord, PlayerId, ScheduledMatch, Score, Sport, Team, TeamSize, Venue } from "./types";
 import { MatchHeader } from "./components/MatchHeader";
@@ -82,8 +82,8 @@ export function App() {
   const [newFormationName, setNewFormationName] = useState("");
   const [newFormationTeamSize, setNewFormationTeamSize] = useState<TeamSize>(8);
   const [historyNotice, setHistoryNotice] = useState("");
-  const [formation, setFormation] = useState(restoredMatch?.formation || initialTeam?.formations?.[0]?.id || defaultFormations[0].id);
-  const initialFormation = initialTeam?.formations?.find((item) => item.id === (restoredMatch?.formation || initialTeam.formations[0]?.id));
+  const [formation, setFormation] = useState(restoredMatch?.formation || (initialTeam && preferredFormation(initialTeam)?.id) || defaultFormations[0].id);
+  const initialFormation = initialTeam?.formations?.find((item) => item.id === restoredMatch?.formation) || (initialTeam ? preferredFormation(initialTeam) : undefined);
   const [lineup, setLineup] = useState(restoredMatch?.lineup || initialTeam?.players.slice(0, initialFormation?.slots.length || 8).map((p) => p.id) || []);
   const [selectedBenchIds, setSelectedBenchIds] = useState<PlayerId[]>([]);
   const [selectedFieldIndexes, setSelectedFieldIndexes] = useState<number[]>([]);
@@ -117,7 +117,7 @@ export function App() {
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
-  const activeFormation = teamFormations.find((item) => item.id === formation) || teamFormations[0];
+  const activeFormation = teamFormations.find((item) => item.id === formation) || teamFormations.find((item) => item.slots.length === lineup.length) || teamFormations[0];
   const slots = activeFormation?.slots || defaultFormations[0].slots;
   const selectedPlayers = selectedBenchIds.length
     ? selectedBenchIds.map((id) => byId[id]).filter(Boolean)
@@ -231,7 +231,7 @@ export function App() {
   }, [running, startedAt, seconds, lineup]);
 
   const activateTeam = (nextTeam: Team) => {
-    const nextFormation = (nextTeam.formations || defaultFormations)[0];
+    const nextFormation = preferredFormation(nextTeam) || defaultFormations[0];
     setTeamId(nextTeam.id);
     setHistoryTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
@@ -255,7 +255,7 @@ export function App() {
     const nextSportTeams = teams.filter((team) => team.sport === nextSport);
     const nextMatch = matchRepository.loadActiveMatch(nextSport, nextSportTeams.map((team) => team.id));
     const nextTeam = nextSportTeams.find((team) => team.id === nextMatch?.teamId) || nextSportTeams[0] || null;
-    const nextFormation = nextTeam?.formations?.find((item) => item.id === nextMatch?.formation) || nextTeam?.formations?.[0];
+    const nextFormation = nextTeam?.formations?.find((item) => item.id === nextMatch?.formation) || (nextTeam ? preferredFormation(nextTeam) : undefined);
     const nextLineup = nextMatch?.lineup || nextTeam?.players.slice(0, nextFormation?.slots.length || 8).map((player) => player.id) || [];
     setSport(nextSport);
     setTeamId(nextTeam?.id || "");
@@ -292,7 +292,7 @@ export function App() {
     if (nextTeam.sport !== sport) return;
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : nextTeam.formations?.[0]?.teamSize || 8);
+    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : preferredFormation(nextTeam)?.teamSize || 8);
   };
 
   const selectBench = (playerId: PlayerId) => {
@@ -544,7 +544,7 @@ export function App() {
     setHistoryTeamId(nextTeam.id);
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    const nextFormation = nextTeam.formations?.find((item) => item.id === restored?.formation) || nextTeam.formations?.[0];
+    const nextFormation = nextTeam.formations?.find((item) => item.id === restored?.formation) || preferredFormation(nextTeam);
     setFormation(nextFormation?.id || restored?.formation || defaultFormations[0].id);
     setActivePlayerIds(restored?.teamId === nextTeam.id ? restored.activePlayerIds : nextTeam.players.map((player) => player.id));
     setActivePlayerDraft(nextTeam.players.map((player) => player.id));
@@ -627,12 +627,6 @@ export function App() {
   };
 
   const openNewMatch = () => {
-    if (matchCreated && !matchEnded && !matchHasActivity) {
-      setMatchCreated(false);
-      setMatchEnded(false);
-      setRunning(false);
-      setStartedAt(undefined);
-    }
     setOpponentDraft(opponent);
     setVenueDraft(venue);
     setActivePlayerDraft(roster.map((player) => player.id));
@@ -689,7 +683,7 @@ export function App() {
   const openScheduledMatch = (scheduled: ScheduledMatch) => {
     const team = teams.find((item) => item.id === scheduled.teamId);
     if (!team) return;
-    const teamFormation = team.formations.find((item) => item.id === scheduled.formation) || team.formations[0];
+    const teamFormation = team.formations.find((item) => item.id === scheduled.formation) || preferredFormation(team) || team.formations[0];
     const playerIds = new Set(team.players.map((player) => player.id));
     const nextActive = scheduled.activePlayerIds.filter((id) => playerIds.has(id));
     const nextLineup = scheduled.lineup.filter((id) => playerIds.has(id));
@@ -903,7 +897,7 @@ export function App() {
         <GamesDialog
           matches={visibleScheduledMatches}
           teams={sportTeams}
-          canOpen={!matchCreated || matchEnded}
+          canOpen={!matchCreated || matchEnded || !matchHasActivity}
           activeScheduledMatchId={activeScheduledMatchId}
           currentTeamId={teamId}
           historyTeamId={historyTeamId}

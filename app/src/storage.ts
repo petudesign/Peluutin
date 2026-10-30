@@ -21,9 +21,10 @@ const parsePlayer = (value: unknown): Player | null => {
 const parseFormation = (value: unknown): Formation | null => {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !Array.isArray(value.slots)) return null;
   const inferredTeamSize = value.slots.length;
-  const teamSize = [5, 8, 11].includes(Number(value.teamSize))
-    ? Number(value.teamSize)
-    : inferredTeamSize;
+  // The slots are what ends up on the pitch, so they win over a stored size that disagrees with them.
+  const teamSize = [5, 8, 11].includes(inferredTeamSize)
+    ? inferredTeamSize
+    : Number(value.teamSize);
   if (![5, 8, 11].includes(teamSize)) return null;
   return { id: value.id, name: value.name, teamSize: teamSize as TeamSize, slots: value.slots as Formation["slots"] };
 };

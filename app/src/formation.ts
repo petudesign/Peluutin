@@ -1,4 +1,4 @@
-import type { FormationSlot, PlayerId, TeamSize } from "./types";
+import type { Formation, FormationSlot, PlayerId, Team, TeamSize } from "./types";
 
 type RowType = "defense" | "midfield" | "attack";
 type RowCount = 1 | 2 | 3 | 4 | 5;
@@ -35,6 +35,15 @@ const rowSlots = (count: RowCount, y: number, type: RowType): FormationSlot[] =>
 
 const formationCounts = (name: string) =>
   name.trim().replace(/[–—−]/g, "-").split("-").map(Number);
+
+// The order of team.formations changes when formations are removed and re-added, so it must not decide the format.
+export function preferredFormation(team: Pick<Team, "sport" | "formations" | "history">): Formation | undefined {
+  const futsal = team.sport === "futsal";
+  const formations = futsal ? team.formations.filter((item) => item.teamSize === 5) : team.formations;
+  return formations.find((item) => item.name === team.history?.[0]?.formation)
+    || formations.find((item) => item.teamSize === (futsal ? 5 : 8))
+    || formations[0];
+}
 
 export function validateFormation(name: string, teamSize: TeamSize): string | null {
   if (!name.trim()) return "Kirjoita muodostelma, esimerkiksi 4–3–3.";

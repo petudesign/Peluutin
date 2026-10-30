@@ -82,3 +82,9 @@ test("keeps valid scheduled matches in chronological order", () => {
   assert.deepEqual(parsed.map(({ id }) => id), ["first", "later"]);
   assert.equal(parsed[0].opponent, "A");
 });
+
+test("trusts the stored slots when a formation's team size disagrees with them", () => {
+  const slots = Array.from({ length: 11 }, () => ["P", 50, 50]);
+  const [team] = parseTeams(JSON.stringify([{ id: "team-1", name: "FC", players: [], formations: [{ id: "x", name: "4–4–2", teamSize: 8, slots }] }]), fallbackFormations);
+  assert.equal(team.formations[0].teamSize, 11);
+});

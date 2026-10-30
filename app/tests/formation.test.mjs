@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createFormation, reorderLineup, validateFormation } from "../src/formation.ts";
+import { createFormation, preferredFormation, reorderLineup, validateFormation } from "../src/formation.ts";
 
 test("creates a valid eight-player formation from a Finnish formation name", () => {
   const slots = createFormation("2–3–2", 8);
@@ -54,4 +54,24 @@ test("formation change keeps right-sided players on the right", () => {
 
   assert.ok(changed.indexOf("OK") > changed.indexOf("VK"));
   assert.ok(changed.indexOf("OH") > changed.indexOf("VH"));
+});
+
+const formation = (teamSize, name) => ({ id: `${teamSize}-${name}`, name, teamSize, slots: createFormation(name, teamSize) });
+
+test("does not let the order of the formation list decide the format of a new match", () => {
+  const formations = [formation(5, "1–2–1"), formation(11, "4–4–2"), formation(8, "3–3–1")];
+  assert.equal(preferredFormation({ sport: "football", formations, history: [] }).teamSize, 8);
+  assert.equal(preferredFormation({ sport: "football", formations: formations.slice(1), history: [] }).teamSize, 8);
+});
+
+test("prefers the format the team played last", () => {
+  const formations = [formation(8, "2–3–2"), formation(11, "4–4–2")];
+  const history = [{ formation: "4–4–2" }, { formation: "2–3–2" }];
+  assert.equal(preferredFormation({ sport: "football", formations, history }).teamSize, 11);
+});
+
+test("falls back to an available format and keeps futsal at 5v5", () => {
+  const formations = [formation(11, "4–4–2"), formation(5, "1–2–1")];
+  assert.equal(preferredFormation({ sport: "football", formations, history: [] }).teamSize, 11);
+  assert.equal(preferredFormation({ sport: "futsal", formations, history: [{ formation: "4–4–2" }] }).teamSize, 5);
 });
