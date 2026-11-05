@@ -5,7 +5,7 @@ import type { Team } from "../../types";
 import { ExerciseCanvas } from "./ExerciseCanvas";
 import { ExerciseLayersPanel } from "./ExerciseLayersPanel";
 import { EXERCISE_DRAFT_STORAGE_KEY, exerciseDraftContentKey, loadSavedExercises, saveSavedExercises, writeStoredExerciseDraft, type SavedExercise } from "./exerciseStorage";
-import { createExerciseShareDraft } from "./exerciseSharing";
+import { createExerciseShareDraft, decodeExerciseShare, encodeExerciseShareCompressed } from "./exerciseSharing";
 import { downloadExerciseImage } from "./exerciseImageExport";
 import { buildExerciseTimeline, canAddTeamPlayer, canTargetExercisePath, createExerciseMarkerCopy, EXERCISE_MAX_DURATION_MS, EXERCISE_MIN_DURATION_MS, EXERCISE_NATURAL_SPEEDS, formatRouteCount, getExerciseMarkerColor, getExercisePathNaturalDurationMs, getNextExercisePathStartMs, isExerciseBallPath, isExercisePathValid, moveExerciseMarkerSelection, normalizeExercisePlayerRole, normalizeExerciseTimeline, removeExerciseLayer, resetExercisePathDuration, resizeExerciseDraftContent, setExercisePathDurationMs, setExercisePathStartMs, type ExerciseAnnotation, type ExerciseDraft, type ExerciseGoalSize, type ExerciseLayerKind, type ExerciseMarker, type ExercisePath, type ExercisePitchOrientation, type ExercisePitchPreset, type ExercisePitchStyle, type ExercisePlayerRole, type ExerciseTimelineEntry, type ExerciseTool, type ExerciseView } from "./exerciseTypes";
 
@@ -31,42 +31,6 @@ const GOAL_SIZE_ITEMS: Array<{ value: ExerciseGoalSize; label: string; icon: typ
 
 function BenchIcon({ size = 18 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 8h18v4H3z" /><path d="M6 12v5m12-5v5M4 17h4m8 0h4" /></svg>;
-}
-
-function bytesToBase64Url(bytes: Uint8Array) {
-  let binary = "";
-  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function encodeExerciseShare(draft: ExerciseDraft) {
-  const bytes = new TextEncoder().encode(JSON.stringify({ version: 1, draft }));
-  return bytesToBase64Url(bytes);
-}
-
-async function encodeExerciseShareCompressed(draft: ExerciseDraft) {
-  if (!("CompressionStream" in window)) return encodeExerciseShare(draft);
-  const source = new TextEncoder().encode(JSON.stringify({ version: 1, draft }));
-  const stream = new Blob([source]).stream().pipeThrough(new CompressionStream("gzip"));
-  return `g.${bytesToBase64Url(new Uint8Array(await new Response(stream).arrayBuffer()))}`;
-}
-
-async function decodeExerciseShare() {
-  try {
-    const encoded = window.location.hash.slice("#harjoite=".length), compressed = encoded.startsWith("g."), data = compressed ? encoded.slice(2) : encoded;
-    if (!encoded || encoded.length > 100_000) return null;
-    const padded = data.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(data.length / 4) * 4, "=");
-    const binary = atob(padded), bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    if (compressed && "DecompressionStream" in window) {
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-      const payload = await new Response(stream).json() as { version?: number; draft?: ExerciseDraft };
-      return payload.version === 1 ? payload.draft || null : null;
-    }
-    const payload = JSON.parse(new TextDecoder().decode(bytes)) as { version?: number; draft?: ExerciseDraft };
-    const draft = payload.version === 1 ? payload.draft : null;
-    if (!draft || !Array.isArray(draft.markers) || !Array.isArray(draft.paths) || !Array.isArray(draft.annotations) || draft.markers.length > 100 || draft.paths.length > 250 || draft.annotations.length > 250) return null;
-    return draft;
-  } catch { return null; }
 }
 
 function formatTimelineTime(milliseconds: number) {
@@ -136,7 +100,7 @@ function loadDraft(team: Team): ExerciseDraft {
 
 export function ExercisePlanner({ team, theme, shared = false, onBack, onToggleTheme }: ExercisePlannerProps) {
   const [draft, setDraft] = useState(() => loadDraft(team));
-  useEffect(() => { if (!shared) return; let active = true; decodeExerciseShare().then(sharedDraft => { if (active && sharedDraft) setDraft(sharedDraft); }); return () => { active = false; }; }, [shared, team]);
+  useEffect(() => { if (!shared) return; let active = true; decodeExerciseShare(window.location.hash).then(sharedDraft => { if (active && sharedDraft) setDraft(sharedDraft); }); return () => { active = false; }; }, [shared, team]);
   const [view, setView] = useState<ExerciseView>(() => shared ? "2d" : "3d");
   const [tool, setTool] = useState<ExerciseTool>("select");
   const [openMenu, setOpenMenu] = useState<ToolMenu>(null);
