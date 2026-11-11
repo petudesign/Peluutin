@@ -58,6 +58,16 @@ The UI always includes an arrow or approximation symbol and explanatory text. Th
 
 The pitch is an SVG background, while player cards remain semantic HTML buttons. This keeps the field sharp and lightweight without sacrificing keyboard, screen-reader or touch interaction.
 
+## Controls
+
+Shared control styles live in one layer at the end of `styles.css`, built on the control and material tokens (`--action-*`, `--control-*`, `--tint-*`, `--danger-*`, `--segmented-track`, `--float-*`, `--scrim`, `--sheet-*`).
+
+- Actions: primary (`.button-primary`, `.create-match-button`), secondary (`.secondary`, `.button-secondary`, `.close-button`), tinted (`.button-add`, `.schedule-match-button`), quiet danger (`.danger`, `.button-danger-quiet`, `.confirm-tertiary`) and filled danger (`.danger-confirm`, `.danger.destructive-filled`). All are at least 44 px tall and scale to .97 while pressed.
+- Filled danger is reserved for the confirming step of a destructive action; list rows use quiet danger.
+- Segmented controls (`.formation-switch`, `.venue-switch`, `.onboarding-sport-switch`) use the exercise planner's track and blue thumb.
+- Navigation, menus and the exercise toolbars share the floating glass material.
+- Dialogs are centred cards on wide screens and sheets rising from the bottom edge below 700 px; confirmations stay centred.
+
 ## Player cards
 
 A card is the `Jersey` component (an SVG shirt carrying the number) above a plate with the name and playing time.

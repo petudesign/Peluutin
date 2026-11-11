@@ -67,7 +67,7 @@ export function GamesDialog({
                 </div>
                 <div className="history-row-actions">
                   <button className="button-secondary" onClick={() => onExportMatch(match, historyTeam.name)}>Vie Exceliin</button>
-                  <button className="danger destructive-filled" onClick={() => onDeleteMatch(historyTeam.id, match.id)}>Poista</button>
+                  <button className="danger" onClick={() => onDeleteMatch(historyTeam.id, match.id)}>Poista</button>
                 </div>
               </article>
             )) : <p className="empty-history">Ei vielä tallennettuja pelejä.</p>}
