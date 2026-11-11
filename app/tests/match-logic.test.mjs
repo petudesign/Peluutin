@@ -44,5 +44,8 @@ test("keeps full short names and abbreviates long pitch-card names", () => {
   assert.equal(formatPitchPlayerName("Minna L."), "Minna L.");
   assert.equal(formatPitchPlayerName("Joni-Petteri"), "Joni-Petteri");
   assert.equal(formatPitchPlayerName("Abdullah Ah-Rahdi"), "Abdullah A.");
-  assert.equal(formatPitchPlayerName("Maximilianusz"), "Maximilianu…");
+  assert.equal(formatPitchPlayerName("Maximilianusz"), "Maximilianusz");
+  assert.equal(formatPitchPlayerName("Venla-Maria Korhonen"), "Venla-Maria K.");
+  assert.equal(formatPitchPlayerName("Aleksanteri-Juhani"), "Aleksanteri-J.");
+  assert.equal(formatPitchPlayerName("Maximilianuszbergson"), "Maximilianuszbe…");
 });

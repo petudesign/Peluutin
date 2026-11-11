@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { FieldUnit, Formation, FormationSlot, Player, PlayerId, Sport } from "../../types";
-import { comparePlaytime, formatPitchPlayerName } from "./matchLogic";
+import { Jersey } from "../../components/Jersey";
+import { comparePlaytime, formatPitchPlayerName, pitchNameLength } from "./matchLogic";
 
 const displayRole = (role: string) => role === "VTP" ? "VKP" : role === "OTP" ? "OKP" : role;
 const mobileCurve = [-3, 3, -3];
@@ -13,8 +14,9 @@ const slotStyle = (slots: FormationSlot[], slotIndex: number, sport: Sport): CSS
   const rowIndex = row.findIndex(({ index }) => index === slotIndex);
   const curve = row.length === 3 ? mobileCurve[rowIndex] : 0;
   const displayX = sport === "futsal" && row.length === 2 ? (rowIndex === 0 ? 22 : 78) : x;
+  // Futsal rows sit in the own half, with enough room above the keeper for a jersey and its name plate.
   const displayY = sport === "futsal"
-    ? role === "MV" ? 91 : 52 + ((y - 21) / 70) * 36
+    ? role === "MV" ? 89 : 46 + ((y - 21) / 70) * 30
     : y;
 
   return {
@@ -122,7 +124,7 @@ export function MatchWorkspace({
               aria-pressed={selectedBenchIds.includes(player.id)}
               onClick={() => onSelectBench(player.id)}
             >
-              <span className="avatar">{player.number}</span>
+              <Jersey number={player.number} />
               <span className="bench-player-copy"><strong>{player.name}</strong></span>
               <span className="bench-time-meta">
                 {playtimeIndicator(player.id)}
@@ -193,15 +195,15 @@ export function MatchWorkspace({
                 aria-pressed={selectedFieldIndexes.includes(index)}
                 aria-label={`${player.name}, paikka ${visibleRole}`}
                 title={player.name}
+                data-name-length={pitchNameLength(formatPitchPlayerName(player.name))}
+                data-role={role}
               >
                 {playtimeIndicator(player.id)}
-                <span className="player-meta">
-                  <span className="player-number">{player.number}</span>
+                <Jersey number={player.number} variant={role === "MV" ? "keeper" : "outfield"} />
+                <span className="player-plate">
+                  <strong>{formatPitchPlayerName(player.name)}</strong>
+                  <span className="player-time-on-field">{formatTime(minutes[player.id] || 0)}</span>
                 </span>
-                <strong className={formatPitchPlayerName(player.name).length <= 10 ? "player-name-single-line" : ""}>
-                  {formatPitchPlayerName(player.name)}
-                </strong>
-                <span className="player-time-on-field">{formatTime(minutes[player.id] || 0)}</span>
               </button>
             );
           })}

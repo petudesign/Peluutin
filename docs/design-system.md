@@ -23,6 +23,8 @@ Current semantic groups:
 - `--primary`, `--primary-hover`, `--primary-soft`, `--primary-ring`
 - `--playtime-behind`, `--playtime-balanced`, `--playtime-ahead`
 
+Below the semantic tokens sits a foundation palette (`--ink-*`, `--blue-*`, `--amber-*`) drawn from the exercise planner, together with `--font-display`, `--font-body` and `--radius-*`. New components should build on these; the older parts of the stylesheet still use raw values and move over as they are redesigned.
+
 Theme overrides belong under `[data-theme="dark"]`. A component should not need separate light- and dark-theme selectors unless its physical context requires one. The pitch player cards are deliberately light in both themes because they must remain the clearest layer on a green field.
 
 ## Colour and contrast
@@ -55,6 +57,15 @@ The UI always includes an arrow or approximation symbol and explanatory text. Th
 ## Pitch
 
 The pitch is an SVG background, while player cards remain semantic HTML buttons. This keeps the field sharp and lightweight without sacrificing keyboard, screen-reader or touch interaction.
+
+## Player cards
+
+A card is the `Jersey` component (an SVG shirt carrying the number) above a plate with the name and playing time.
+
+- Kit colours come from the `--jersey-*` tokens. A state changes only those variables: selected is blue, a valid substitution target is amber and the keeper (`MV`) wears a dark shirt.
+- Card, jersey and text sizes follow the pitch width through container query units, so 11v11 on a small phone scales down instead of overlapping. Browsers without container units get fixed sizes.
+- Names up to 16 characters are shown whole and may wrap onto two lines. Longer names keep the first name and shorten the rest to an initial (`Venla-Maria K.`, `Aleksanteri-J.`). The full name is always in the button's accessible label and the selected-player panel.
+- Layouts are checked with long names in 5v5, 8v8 and 11v11 from 375 × 667 upwards; cards must not overlap or leave the pitch.
 
 ## Themes
 

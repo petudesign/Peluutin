@@ -39,11 +39,25 @@ export function comparePlaytime(playerSeconds: number, averageSeconds: number): 
   return { state, differenceSeconds };
 }
 
+const PITCH_NAME_MAX_LENGTH = 16;
+
+// Pitch cards fit two short lines, so long names keep the first name and shorten the rest to an initial.
 export function formatPitchPlayerName(name: string): string {
   const normalized = name.trim().replaceAll(/\s+/g, " ");
-  if (normalized.length <= 12) return normalized;
+  if (normalized.length <= PITCH_NAME_MAX_LENGTH) return normalized;
   const parts = normalized.split(" ");
-  if (parts.length === 1) return `${normalized.slice(0, 11)}…`;
-  const abbreviated = `${parts[0]} ${parts.at(-1)![0]}.`;
-  return abbreviated.length <= 14 ? abbreviated : `${parts[0].slice(0, 11)}…`;
+  if (parts.length > 1) {
+    const abbreviated = `${parts[0]} ${parts.at(-1)![0]}.`;
+    if (abbreviated.length <= PITCH_NAME_MAX_LENGTH) return abbreviated;
+  }
+  const [first, ...rest] = parts[0].split("-");
+  if (rest.length) {
+    const abbreviated = `${first}-${rest[0][0]}.`;
+    if (abbreviated.length <= PITCH_NAME_MAX_LENGTH) return abbreviated;
+  }
+  return `${parts[0].slice(0, PITCH_NAME_MAX_LENGTH - 1)}…`;
+}
+
+export function pitchNameLength(name: string): "short" | "medium" | "long" {
+  return name.length <= 7 ? "short" : name.length <= 11 ? "medium" : "long";
 }
