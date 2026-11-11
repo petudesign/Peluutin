@@ -1,13 +1,15 @@
-import { CalendarDays, UsersRound } from "lucide-react";
+import { CalendarDays, ClipboardList, Settings, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface MobileNavProps {
   onNewMatch: () => void;
   onOpenTeams: () => void;
   onOpenGames: () => void;
+  onOpenExercises: () => void;
+  onOpenSettings: () => void;
 }
 
-export function MobileNav({ onNewMatch, onOpenTeams, onOpenGames }: MobileNavProps) {
+export function MobileNav({ onNewMatch, onOpenTeams, onOpenGames, onOpenExercises, onOpenSettings }: MobileNavProps) {
   const [isHidden, setIsHidden] = useState(false);
   const isHiddenRef = useRef(false);
   const lastScrollY = useRef(0);
@@ -45,6 +47,14 @@ export function MobileNav({ onNewMatch, onOpenTeams, onOpenGames }: MobileNavPro
       <button className="mobile-nav-games" onClick={onOpenGames}>
         <CalendarDays aria-hidden="true" />
         <span>Pelit</span>
+      </button>
+      <button className="mobile-nav-exercises" onClick={onOpenExercises}>
+        <ClipboardList aria-hidden="true" />
+        <span>Harjoitteet</span>
+      </button>
+      <button className="mobile-nav-settings" onClick={onOpenSettings}>
+        <Settings aria-hidden="true" />
+        <span>Asetukset</span>
       </button>
     </nav>
   );

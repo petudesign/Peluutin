@@ -93,6 +93,9 @@
   --scrim: rgba(8, 18, 23, .42);
   --sheet-border: rgba(35, 73, 88, .1);
   --sheet-shadow: 0 30px 80px rgba(8, 18, 23, .28);
+  --nav-glass: rgba(252, 253, 253, .96);
+  --nav-glass-border: rgba(23, 48, 58, .12);
+  --nav-glass-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 2px 6px rgba(23, 48, 58, .08), 0 18px 40px -12px rgba(23, 48, 58, .34);
 }
 [data-theme="dark"] {
   color-scheme: dark;
@@ -115,6 +118,9 @@
   --scrim: rgba(2, 8, 12, .7);
   --sheet-border: var(--border-default);
   --sheet-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+  --nav-glass: rgba(13, 34, 45, .95);
+  --nav-glass-border: rgba(154, 190, 207, .24);
+  --nav-glass-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -12px rgba(0, 0, 0, .6);
   --surface-page: #081217;
   --surface-panel: #0d1c25;
   --surface-subtle: #142a35;
@@ -1169,10 +1175,10 @@ h2 { font-size: 24px; }
     z-index: 40;
     bottom: max(20px, calc(env(safe-area-inset-bottom) + 6px));
     left: 50%;
-    width: min(calc(100% - 28px), 340px);
+    width: min(calc(100% - 24px), 420px);
     transform: translateX(-50%);
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     height: 60px;
     min-height: 60px;
     padding: 5px 8px;
@@ -1201,14 +1207,19 @@ h2 { font-size: 24px; }
   .mobile-nav button:hover { background: rgba(255,255,255,.07); }
   .mobile-nav button:active { background: rgba(255,255,255,.12); transform: translateY(1px); }
   .mobile-nav button:first-child { color: var(--text-on-action); }
+  /* Explicit columns with DOM order differing from visual order would otherwise wrap to a second row. */
+  .mobile-nav > button { grid-row: 1; }
   .mobile-nav-teams { grid-column: 1; }
-  .mobile-nav-games { grid-column: 3; }
+  .mobile-nav-games { grid-column: 2; }
+  .mobile-nav .mobile-nav-new { grid-column: 3; }
+  .mobile-nav-exercises { grid-column: 4; }
+  .mobile-nav-settings { grid-column: 5; }
   .mobile-nav img, .mobile-nav svg { width: 21px; height: 21px; color: currentColor; }
   .mobile-nav img { filter: brightness(0) invert(1); }
   .mobile-nav-plus { font: 800 25px/20px "Manrope"; }
   .theme-icon { font: 700 22px/20px "Manrope"; }
   .mobile-nav .mobile-nav-new {
-    grid-column: 2;
+    grid-column: 3;
     width: auto;
     height: auto;
     min-height: 48px;
@@ -3077,7 +3088,6 @@ input::-webkit-date-and-time-value { text-align: left; }
 .exercise-timeline-clip.shot { border-color:rgba(255,118,108,.58); background:#923f38; }
 @keyframes exercise-timeline-in { from { opacity:0; transform:translateY(10px) scale(.985); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { .exercise-canvas-wrap { transition:none; }.exercise-timeline-editor { animation:none; } }
-.exercise-mobile-block { display: none; }
 .exercise-nav-link {
   position: fixed;
   right: 30px;
@@ -3280,23 +3290,6 @@ input::-webkit-date-and-time-value { text-align: left; }
 [data-theme="light"] .exercise-speed-switch button { color:#607984; }
 [data-theme="light"] .exercise-speed-switch button.active { background:transparent; color:#fff; }
 
-@media (max-width: 960px),
-       (max-width: 1000px) and (max-height: 600px) {
-  .exercise-desktop-app { display: none; }
-  .exercise-mobile-block {
-    min-height: 100dvh;
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    padding: 32px 24px;
-    text-align: center;
-  }
-  .exercise-mobile-block img { width: 150px; margin-bottom: 24px; }
-  .exercise-mobile-block h1 { max-width: 340px; margin: 0; font: 800 24px/1.2 "Manrope"; }
-  .exercise-mobile-block p { max-width: 360px; margin: 14px 0 22px; color: var(--text-secondary); font-size: 14px; line-height: 1.55; }
-  .exercise-mobile-block p strong { color: var(--text-primary); }
-  .exercise-mobile-block button { padding: 11px 16px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 800; }
-}
 
 @media (max-width: 720px) {
   .exercise-nav-link { display: none; }
@@ -3669,14 +3662,25 @@ button:active:not(:disabled) {
 }
 
 @media (max-width: 720px) {
+  /* The tab bar sits just above the home indicator or Safari's toolbar, nearly opaque so content under it never shows through. */
   :root .mobile-nav {
-    border: 1px solid var(--float-border);
-    background: var(--float-bg);
-    box-shadow: var(--float-shadow);
+    bottom: max(10px, calc(env(safe-area-inset-bottom) - 10px));
+    width: min(calc(100% - 20px), 440px);
+    height: 66px;
+    min-height: 66px;
+    padding: 5px 6px;
+    border-radius: 26px;
+    border: 1px solid var(--nav-glass-border);
+    background: var(--nav-glass);
+    box-shadow: var(--nav-glass-shadow);
     backdrop-filter: blur(18px) saturate(1.4);
     -webkit-backdrop-filter: blur(18px) saturate(1.4);
   }
-  :root .mobile-nav button { color: var(--text-primary); }
+  :root .mobile-nav button { min-height: 56px; gap: 4px; color: var(--text-primary); font: 700 12px/1 var(--font-display); }
+  :root .mobile-nav :is(img, svg) { width: 23px; height: 23px; }
+  :root .mobile-nav .mobile-nav-new span:last-child { font-size: 12px; }
+  :root .mobile-nav .mobile-nav-new .mobile-nav-plus { width: 36px; height: 36px; margin-top: -12px; font-size: 24px; }
+  :root .app-shell { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   :root .mobile-nav button:hover { background: var(--control-bg-hover); }
   :root .mobile-nav button:active:not(:disabled) { background: var(--control-bg-hover); opacity: 1; transform: scale(.96); }
   :root .mobile-nav img { filter: var(--nav-icon-filter); }
@@ -3830,4 +3834,60 @@ button:active:not(:disabled) {
   .player-card .jersey,
   .player-card .player-plate { animation: none; }
 }
+
+/* Phone exercise library: saved exercises open in the read-only viewer. */
+.exercise-library-page {
+  min-height: 100dvh;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+.exercise-library-page-header { display: flex; align-items: center; gap: 12px; }
+.exercise-library-page-header h1 { margin: 4px 0 0; font: 800 26px/1.1 var(--font-display); letter-spacing: -.025em; }
+.exercise-library-page .exercise-icon-button { border-color: var(--control-border); background: var(--control-bg); color: var(--text-primary); }
+.exercise-library-page-note { max-width: 65ch; margin: 14px 0 18px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+.exercise-library-page-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.exercise-library-page-list button {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: var(--panel-shadow);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+.exercise-library-page-list button:active { opacity: 1; transform: scale(.98); }
+.exercise-library-page-list button > svg { color: var(--text-muted); }
+.exercise-library-page-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--tint-bg); color: var(--tint-ink); }
+.exercise-library-page-copy { display: grid; gap: 4px; min-width: 0; }
+.exercise-library-page-copy strong { overflow: hidden; font: 700 16px/1.2 var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+.exercise-library-page-copy small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.exercise-library-page .exercise-library-empty { color: var(--text-secondary); }
+
+/* Keyboard and mouse hints mean nothing on a touch screen and would cover the tool column on a portrait tablet. */
+@media (pointer: coarse) {
+  .exercise-stage-hint { display: none; }
+}
+
+/* Resetting the clock is rare and destructive, so it sits under the pitch as a quiet danger button, clear of the players. */
+:root :is(.pitch-reset-trigger, .toolbar-reset-trigger) {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--danger-border);
+  border-radius: 999px;
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+  font: 700 13px/1 var(--font-display);
+  transition: transform 120ms var(--ease-out);
+}
+:root .pitch-reset-trigger { position: static; justify-self: center; margin-top: 14px; }
+:root :is(.pitch-reset-trigger, .toolbar-reset-trigger):active:not(:disabled) { opacity: 1; transform: scale(.96); }
 

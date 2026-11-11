@@ -76,6 +76,12 @@ Shared control styles live in one layer at the end of `styles.css`, built on the
 - Tablets (721–1200 px) use one menu button for Pelit, Joukkueet and Asetukset.
 - In portrait on a tablet the pitch spans the width and the bench and player panels sit side by side below it, sized so the whole bench stays visible with the pitch.
 
+## Exercises across devices
+
+- Phones (up to 720 px wide, or under 500 px tall in landscape) view and play exercises but do not edit them. Harjoitteet opens a list of the team's saved exercises and the unsaved draft; each opens in the same read-only viewer as a shared link. Viewing never writes over the stored draft.
+- Tablets in either orientation and larger screens get the full editor. Keyboard and mouse hints are hidden on touch screens.
+- The phone navigation has five items: Joukkueet, Pelit, Uusi peli in the centre, Harjoitteet and Asetukset.
+
 ## Player cards
 
 A card is the `Jersey` component (an SVG shirt carrying the number) above a plate with the name and playing time.

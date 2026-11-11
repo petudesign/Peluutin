@@ -207,8 +207,8 @@ export function MatchWorkspace({
               </button>
             );
           })}
-          {canResetClock && <button className="pitch-reset-trigger" onClick={onRequestResetClock}>Ajan nollaus</button>}
         </div>
+        {canResetClock && <button className="pitch-reset-trigger" onClick={onRequestResetClock}>Ajan nollaus</button>}
       </section>
 
       <aside className="side-panel details">

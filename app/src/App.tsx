@@ -887,6 +887,8 @@ export function App() {
         onNewMatch={openNewMatch}
         onOpenTeams={openTeamSettings}
         onOpenGames={() => setGamesOpen(true)}
+        onOpenExercises={openExercises}
+        onOpenSettings={() => { setAppSettingsReturnToTeams(false); setAppSettingsOpen(true); }}
       />
 
       {newMatchOpen && (
