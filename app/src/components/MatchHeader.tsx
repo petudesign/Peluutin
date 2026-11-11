@@ -1,6 +1,7 @@
 import { CalendarDays, Check, ChevronDown, ClipboardList, Menu, Settings, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Score, Sport } from "../types";
+import { getSport, SPORTS } from "../sports";
 
 interface MatchHeaderProps {
   homeName: string;
@@ -75,16 +76,13 @@ export function MatchHeader({
 
   const renderSportMenu = () => sportMenuOpen && (
     <div className="sport-switcher-menu" role="menu" aria-label="Valitse laji">
-      <button className={`sport-switcher-option ${sport === "football" ? "active" : ""}`} type="button" role="menuitem" onClick={() => { onSportChange("football"); setSportMenuOpen(false); }}>
-        <img src="/assets/sport-football.png" alt="" />
-        <span className="sport-switcher-option-copy"><strong>Jalkapallo</strong><small>{sport === "football" ? "Valittu laji" : "Vaihda lajiin"}</small></span>
-        {sport === "football" && <Check size={16} aria-hidden="true" />}
-      </button>
-      <button className={`sport-switcher-option ${sport === "futsal" ? "active" : ""}`} type="button" role="menuitem" onClick={() => { onSportChange("futsal"); setSportMenuOpen(false); }}>
-        <img src="/assets/sport-futsal.png" alt="" />
-        <span className="sport-switcher-option-copy"><strong>Futsal</strong><small>{sport === "futsal" ? "Valittu laji" : "Vaihda lajiin"}</small></span>
-        {sport === "futsal" && <Check size={16} aria-hidden="true" />}
-      </button>
+      {SPORTS.map((item) => (
+        <button key={item.id} className={`sport-switcher-option ${sport === item.id ? "active" : ""}`} type="button" role="menuitem" onClick={() => { onSportChange(item.id); setSportMenuOpen(false); }}>
+          <img src={item.image} alt="" />
+          <span className="sport-switcher-option-copy"><strong>{item.name}</strong><small>{sport === item.id ? "Valittu laji" : "Vaihda lajiin"}</small></span>
+          {sport === item.id && <Check size={16} aria-hidden="true" />}
+        </button>
+      ))}
     </div>
   );
 
@@ -101,7 +99,7 @@ export function MatchHeader({
             aria-expanded={sportMenuOpen}
             onClick={() => setSportMenuOpen((open) => !open)}
           >
-            <span>{sport === "futsal" ? "Futsal" : "Jalkapallo"}</span>
+            <span>{getSport(sport).name}</span>
             <ChevronDown size={15} aria-hidden="true" />
           </button>
           {renderSportMenu()}
@@ -111,7 +109,7 @@ export function MatchHeader({
         <button
           className="mobile-sport-trigger"
           type="button"
-          aria-label={`Vaihda lajia. Valittuna ${sport === "futsal" ? "futsal" : "jalkapallo"}`}
+          aria-label={`Vaihda lajia. Valittuna ${getSport(sport).name.toLowerCase()}`}
           aria-haspopup="menu"
           aria-expanded={sportMenuOpen}
           onClick={() => setSportMenuOpen((open) => !open)}

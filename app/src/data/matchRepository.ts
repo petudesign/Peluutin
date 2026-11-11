@@ -1,5 +1,6 @@
 import { parseActiveMatch, parseScheduledMatches, parseTeams } from "../storage";
 import type { ActiveMatch, Formation, ScheduledMatch, Sport, Team } from "../types";
+import { SPORTS } from "../sports";
 
 const TEAMS_KEY = "vaihtopeli-teams";
 const ACTIVE_MATCH_KEY = "peluutin-active-match";
@@ -21,7 +22,7 @@ export const matchRepository = {
     try {
       const value: unknown = JSON.parse(raw || "null");
       const isStoredMatches = value && typeof value === "object" && !Array.isArray(value)
-        && ("football" in value || "futsal" in value || "legacy" in value);
+        && (SPORTS.some((item) => item.id in value) || "legacy" in value);
       if (isStoredMatches) {
         const matches = value as StoredActiveMatches;
         const storedMatch = parseActiveMatch(JSON.stringify(matches[sport] || null));
@@ -43,11 +44,8 @@ export const matchRepository = {
         if (legacy) matches.legacy = legacy;
       } else if (value && typeof value === "object" && !Array.isArray(value)) {
         const stored = value as StoredActiveMatches;
-        matches = {
-          football: stored.football,
-          futsal: stored.futsal,
-          legacy: stored.legacy,
-        };
+        matches = { legacy: stored.legacy };
+        SPORTS.forEach((item) => { if (stored[item.id]) matches[item.id] = stored[item.id]; });
       }
     } catch { /* discard malformed active-match data */ }
     if (match) {
@@ -55,7 +53,7 @@ export const matchRepository = {
       if (matches.legacy?.teamId === match.teamId) delete matches.legacy;
     }
     else delete matches[sport];
-    if (matches.football || matches.futsal || matches.legacy) localStorage.setItem(ACTIVE_MATCH_KEY, JSON.stringify(matches));
+    if (SPORTS.some((item) => matches[item.id]) || matches.legacy) localStorage.setItem(ACTIVE_MATCH_KEY, JSON.stringify(matches));
     else localStorage.removeItem(ACTIVE_MATCH_KEY);
   },
 

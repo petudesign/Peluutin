@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { NAME_MAX_LENGTH } from "../storage";
 import type { FieldUnit, Player, PlayerId, Sport } from "../types";
 import { FieldUnitsEditor } from "./FieldUnitsEditor";
+import { getSport } from "../sports";
 
 interface PlayerOnboardingProps {
   teamName: string;
@@ -92,7 +93,7 @@ export function PlayerOnboarding({
           )}
         </section>
 
-        {sport === "futsal" ? (
+        {getSport(sport).fieldUnits ? (
           <FieldUnitsEditor players={players} fieldUnits={fieldUnits} onAdd={onAddFieldUnit} onUpdate={onUpdateFieldUnit} onRemove={onRemoveFieldUnit} />
         ) : null}
 

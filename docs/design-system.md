@@ -82,6 +82,11 @@ Shared control styles live in one layer at the end of `styles.css`, built on the
 - Tablets in either orientation and larger screens get the full editor. Keyboard and mouse hints are hidden on touch screens.
 - The phone navigation has five items: Joukkueet, Pelit, Uusi peli in the centre, Harjoitteet and Asetukset.
 
+## Sports and metrics
+
+- Every sport is described once in `src/sports.ts`: name, team noun, image, offered formats, default format, whether it rotates field units and whether the lineup sits in the own half. Screens read these values instead of comparing sport ids. Adding a sport means adding it to the `Sport` type, adding its definition and giving `.pitch-<id>` a pitch background.
+- Team analytics live in `src/features/match/matchStats.ts`. The summary cards render from `TEAM_METRICS`, so a new metric is one entry with a label and a value function.
+
 ## Player cards
 
 A card is the `Jersey` component (an SVG shirt carrying the number) above a plate with the name and playing time.

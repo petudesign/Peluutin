@@ -4,6 +4,7 @@ import { validateFormation } from "../../formation";
 import { FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, Player, PlayerId, Sport, Team, TeamSize } from "../../types";
 import { FieldUnitsEditor } from "../../components/FieldUnitsEditor";
+import { getSport } from "../../sports";
 
 interface SettingsDialogProps {
   teams: Team[];
@@ -193,11 +194,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
                     onNewFormationTeamSizeChange(Number(event.target.value) as TeamSize);
                   }}
                 >
-                  <option value="5">5v5</option>
-                  {sport === "football" && <>
-                    <option value="8">8v8</option>
-                    <option value="11">11v11</option>
-                  </>}
+                  {getSport(sport).teamSizes.map((size) => <option key={size} value={size}>{size}v{size}</option>)}
                 </select>
                 <input
                   maxLength={FORMATION_MAX_LENGTH}
@@ -223,7 +220,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
               {formationError && <p id="formation-error" className="field-error" role="alert">{formationError}</p>}
             </section>
 
-            {sport === "futsal" ? (
+            {getSport(sport).fieldUnits ? (
               <FieldUnitsEditor players={roster} fieldUnits={team.fieldUnits} onAdd={onAddFieldUnit} onUpdate={onUpdateFieldUnit} onRemove={onRemoveFieldUnit} />
             ) : null}
 

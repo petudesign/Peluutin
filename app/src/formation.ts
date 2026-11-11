@@ -1,4 +1,5 @@
 import type { Formation, FormationSlot, PlayerId, Team, TeamSize } from "./types";
+import { getSport } from "./sports.ts";
 
 type RowType = "defense" | "midfield" | "attack";
 type RowCount = 1 | 2 | 3 | 4 | 5;
@@ -38,10 +39,10 @@ const formationCounts = (name: string) =>
 
 // The order of team.formations changes when formations are removed and re-added, so it must not decide the format.
 export function preferredFormation(team: Pick<Team, "sport" | "formations" | "history">): Formation | undefined {
-  const futsal = team.sport === "futsal";
-  const formations = futsal ? team.formations.filter((item) => item.teamSize === 5) : team.formations;
+  const sport = getSport(team.sport);
+  const formations = team.formations.filter((item) => sport.teamSizes.includes(item.teamSize));
   return formations.find((item) => item.name === team.history?.[0]?.formation)
-    || formations.find((item) => item.teamSize === (futsal ? 5 : 8))
+    || formations.find((item) => item.teamSize === sport.defaultTeamSize)
     || formations[0];
 }
 

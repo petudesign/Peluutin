@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { FieldUnit, Formation, FormationSlot, Player, PlayerId, Sport } from "../../types";
 import { Jersey } from "../../components/Jersey";
 import { comparePlaytime, formatPitchPlayerName, pitchNameLength } from "./matchLogic";
+import { getSport } from "../../sports";
 
 const displayRole = (role: string) => role === "VTP" ? "VKP" : role === "OTP" ? "OKP" : role;
 const mobileCurve = [-3, 3, -3];
@@ -13,9 +14,10 @@ const slotStyle = (slots: FormationSlot[], slotIndex: number, sport: Sport): CSS
     .filter(({ slot }) => slot[2] === y);
   const rowIndex = row.findIndex(({ index }) => index === slotIndex);
   const curve = row.length === 3 ? mobileCurve[rowIndex] : 0;
-  const displayX = sport === "futsal" && row.length === 2 ? (rowIndex === 0 ? 22 : 78) : x;
-  // Futsal rows sit in the own half, with enough room above the keeper for a jersey and its name plate.
-  const displayY = sport === "futsal"
+  const ownHalf = getSport(sport).pitchLayout === "own-half";
+  const displayX = ownHalf && row.length === 2 ? (rowIndex === 0 ? 22 : 78) : x;
+  // Own-half rows (futsal) leave enough room above the keeper for a jersey and its name plate.
+  const displayY = ownHalf
     ? role === "MV" ? 89 : 46 + ((y - 21) / 70) * 30
     : y;
 
@@ -104,7 +106,7 @@ export function MatchWorkspace({
             : "Valitse 1–5 vaihtopelaajaa ja sen jälkeen sama määrä pelaajia kentältä."}
         </p>
         <button className="add-player-trigger" type="button" onClick={onAddPlayer}>+ Lisää pelaaja joukkueeseen</button>
-        {sport === "futsal" && fieldUnits.length ? (
+        {getSport(sport).fieldUnits && fieldUnits.length ? (
           <div className="bench-field-units" aria-label="Kentälliset">
             {fieldUnits.map((unit) => {
               const availableCount = unit.playerIds.filter((id) => benchIds.has(id)).length;

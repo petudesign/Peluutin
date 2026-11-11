@@ -3891,3 +3891,18 @@ button:active:not(:disabled) {
 :root .pitch-reset-trigger { position: static; justify-self: center; margin-top: 14px; }
 :root :is(.pitch-reset-trigger, .toolbar-reset-trigger):active:not(:disabled) { opacity: 1; transform: scale(.96); }
 
+/* Analytics: metric cards use the shared panel material, with large tabular figures. */
+:root .analytics-summary-grid article {
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  min-height: 92px;
+  padding: 14px 16px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+:root .analytics-summary-grid span { color: var(--text-muted); font: 800 10px/1.3 var(--font-body); letter-spacing: .1em; text-transform: uppercase; }
+:root .analytics-summary-grid strong { color: var(--text-primary); font: 800 24px/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+:root .analytics-table { font-variant-numeric: tabular-nums; }
+

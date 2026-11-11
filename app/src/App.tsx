@@ -21,6 +21,7 @@ import { applyBatchSubstitution, changePlayerGoal } from "./features/match/match
 import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
+import { DEFAULT_SPORT, getSport, isSport, teamSizeFor } from "./sports";
 
 const ExercisePlanner = lazy(() => import("./features/exercises/ExercisePlanner.js").then((module) => ({ default: module.ExercisePlanner })));
 
@@ -37,7 +38,8 @@ const defaultFormations: Formation[] = [
 }));
 
 const initialTeams = matchRepository.loadTeams(defaultFormations);
-const initialSport: Sport = localStorage.getItem("peluutin-sport") === "futsal" ? "futsal" : "football";
+const storedSport = localStorage.getItem("peluutin-sport");
+const initialSport: Sport = isSport(storedSport) ? storedSport : DEFAULT_SPORT;
 const initialActiveMatch = matchRepository.loadActiveMatch(initialSport, initialTeams.filter((team) => team.sport === initialSport).map((team) => team.id));
 const initialScheduledMatches = matchRepository.loadScheduledMatches();
 const initialTeam = initialTeams.find((team) => team.sport === initialSport && team.id === initialActiveMatch?.teamId)
@@ -109,18 +111,19 @@ export function App() {
   const byId = useMemo(() => Object.fromEntries(roster.map((p) => [p.id, p])), [roster]);
   const activeRoster = roster.filter((player) => activePlayerIds.includes(player.id));
   const bench = activeRoster.filter((p) => !lineup.includes(p.id));
-  const sportFormations = (homeTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5);
+  const sportDefinition = getSport(sport);
+  const sportFormations = (homeTeam?.formations || defaultFormations).filter((item) => sportDefinition.teamSizes.includes(item.teamSize));
   const teamFormations = sportFormations.map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
-  const settingsFormations = (settingsTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5).map((item) => ({
+  const settingsFormations = (settingsTeam?.formations || defaultFormations).filter((item) => sportDefinition.teamSizes.includes(item.teamSize)).map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
   // The dialog's team is only a draft: the current match stays untouched until a new one is actually created.
   const newMatchTeam = sportTeams.find((team) => team.id === newMatchTeamId) || homeTeam;
-  const newMatchFormations = (newMatchTeam?.formations || defaultFormations).filter((item) => sport === "football" || item.teamSize === 5).map((item) => ({
+  const newMatchFormations = (newMatchTeam?.formations || defaultFormations).filter((item) => sportDefinition.teamSizes.includes(item.teamSize)).map((item) => ({
     ...item,
     slots: createFormation(item.name, item.teamSize) || item.slots,
   }));
@@ -294,7 +297,7 @@ export function App() {
   const openSettingsForTeam = (nextTeam: Team) => {
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : matchCreated && nextTeam.id === teamId ? activeFormation?.teamSize || 8 : 8);
+    setNewFormationTeamSize(teamSizeFor(nextTeam.sport, matchCreated && nextTeam.id === teamId ? activeFormation?.teamSize : null));
     setSettingsOpen(true);
   };
 
@@ -302,7 +305,7 @@ export function App() {
     if (nextTeam.sport !== sport) return;
     setSettingsTeamId(nextTeam.id);
     setTeamNameDraft(nextTeam.name);
-    setNewFormationTeamSize(nextTeam.sport === "futsal" ? 5 : preferredFormation(nextTeam)?.teamSize || 8);
+    setNewFormationTeamSize(teamSizeFor(nextTeam.sport, preferredFormation(nextTeam)?.teamSize));
   };
 
   const selectBench = (playerId: PlayerId) => {
@@ -489,7 +492,7 @@ export function App() {
 
   const addFieldUnit = (name: string, playerIds: PlayerId[]) => {
     const normalizedName = cleanName(name);
-    if (!normalizedName || settingsTeam?.sport !== "futsal") return;
+    if (!normalizedName || !getSport(settingsTeam?.sport).fieldUnits) return;
     updateSettingsTeam((team) => {
       const validPlayerIds = [...new Set(playerIds.filter((id) => team.players.some((player) => player.id === id)))].slice(0, 5);
       if (!validPlayerIds.length || team.fieldUnits.some((unit) => unit.name.toLocaleLowerCase("fi") === normalizedName.toLocaleLowerCase("fi"))) return team;
@@ -503,7 +506,7 @@ export function App() {
 
   const updateFieldUnit = (fieldUnitId: string, name: string, playerIds: PlayerId[]) => {
     const normalizedName = cleanName(name);
-    if (!normalizedName || settingsTeam?.sport !== "futsal") return;
+    if (!normalizedName || !getSport(settingsTeam?.sport).fieldUnits) return;
     updateSettingsTeam((team) => {
       const validPlayerIds = [...new Set(playerIds.filter((id) => team.players.some((player) => player.id === id)))].slice(0, 5);
       if (!validPlayerIds.length || team.fieldUnits.some((unit) => unit.id !== fieldUnitId && unit.name.toLocaleLowerCase("fi") === normalizedName.toLocaleLowerCase("fi"))) return team;
@@ -799,7 +802,7 @@ export function App() {
     return (
       <Suspense fallback={<main className="exercise-loading">Avataan harjoituseditoria…</main>}>
         <ExercisePlanner
-          team={homeTeam || { id: "shared", name: "Jaettu harjoite", sport: "football", players: [], formations: [], fieldUnits: [], history: [] }}
+          team={homeTeam || { id: "shared", name: "Jaettu harjoite", sport: DEFAULT_SPORT, players: [], formations: [], fieldUnits: [], history: [] }}
           shared={sharedExercise}
           theme={theme}
           onBack={closeExercises}

@@ -1,4 +1,5 @@
 import type { ActiveMatch, FieldUnit, Formation, MatchRecord, Player, ScheduledMatch, Score, Sport, Team, TeamSize, Venue } from "./types";
+import { DEFAULT_SPORT, isSport } from "./sports.ts";
 
 export const NAME_MAX_LENGTH = 60;
 export const FORMATION_MAX_LENGTH = 12;
@@ -64,7 +65,7 @@ export function parseTeams(raw: string | null, defaultFormations: Formation[]): 
       return [{
         id: value.id,
         name: cleanName(value.name) || "Nimetön joukkue",
-        sport: value.sport === "futsal" ? "futsal" : "football",
+        sport: isSport(value.sport) ? value.sport : DEFAULT_SPORT,
         players,
         formations: formations.length ? formations : defaultFormations,
         fieldUnits: Array.isArray(value.fieldUnits)

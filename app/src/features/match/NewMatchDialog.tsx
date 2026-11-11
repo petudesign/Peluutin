@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, Player, PlayerId, ScheduledMatch, Sport, Team, TeamSize, Venue } from "../../types";
 import { formatScheduledDate, parseScheduledDate, scheduledDateFromInputValue, scheduledDateToInputValue, scheduledStartError } from "./scheduledDate";
+import { getSport, teamSizeFor } from "../../sports";
 
 const defaultScheduledAt = () => {
   const date = new Date(Date.now() + 60 * 60 * 1000);
@@ -54,7 +55,7 @@ export function NewMatchDialog({
 }: NewMatchDialogProps) {
   const initialFormation = formations.find((item) => item.id === initialFormationId) || formations[0];
   const [step, setStep] = useState<"details" | "lineup">("details");
-  const [teamSize, setTeamSize] = useState<TeamSize>(sport === "futsal" ? 5 : initialFormation?.teamSize || 8);
+  const [teamSize, setTeamSize] = useState<TeamSize>(teamSizeFor(sport, initialFormation?.teamSize));
   const availableFormations = formations.filter((item) => item.teamSize === teamSize);
   const [formationId, setFormationId] = useState(initialFormation?.id || "");
   const [lineup, setLineup] = useState<PlayerId[]>([]);
@@ -154,15 +155,11 @@ export function NewMatchDialog({
                 value={teamSize}
                 onChange={(event) => {
                   const nextSize = Number(event.target.value) as TeamSize;
-                  setTeamSize(sport === "futsal" ? 5 : nextSize);
+                  setTeamSize(teamSizeFor(sport, nextSize));
                   setFormationId(formations.find((item) => item.teamSize === nextSize)?.id || "");
                 }}
               >
-                <option value="5">5v5</option>
-                {sport === "football" && <>
-                  <option value="8">8v8</option>
-                  <option value="11">11v11</option>
-                </>}
+                {getSport(sport).teamSizes.map((size) => <option key={size} value={size}>{size}v{size}</option>)}
               </select>
               {!availableFormations.length && <small className="form-warning">Lisää ensin {teamSize}v{teamSize}-muodostelma asetuksissa.</small>}
             </label>
