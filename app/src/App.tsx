@@ -151,7 +151,7 @@ export function App() {
   useEffect(() => {
     const color = activeFeature === "exercises"
       ? (theme === "dark" ? "#081217" : "#e7edef")
-      : (theme === "dark" ? "#0d1c25" : "#fbfcfb");
+      : (theme === "dark" ? "#0d1c25" : "#fcfdfd");
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
   }, [activeFeature, theme]);
 
