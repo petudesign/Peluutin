@@ -68,6 +68,14 @@ Shared control styles live in one layer at the end of `styles.css`, built on the
 - Navigation, menus and the exercise toolbars share the floating glass material.
 - Dialogs are centred cards on wide screens and sheets rising from the bottom edge below 700 px; confirmations stay centred.
 
+## Match header and layout
+
+- The header is one block in `styles.css`. Desktop shows each team name beside its score; tablets and phones put the names above the − score + controls. On phones the header is a seven-column grid with the sport button in the first cell and the clock in the middle column.
+- Score buttons are drawn at 36–40 px and extend their hit area to at least 44 px.
+- The clock's main action is primary, Tauko is secondary and Lopeta is quiet danger; the filled red step comes in the confirmation.
+- Tablets (721–1200 px) use one menu button for Pelit, Joukkueet and Asetukset.
+- In portrait on a tablet the pitch spans the width and the bench and player panels sit side by side below it, sized so the whole bench stays visible with the pitch.
+
 ## Player cards
 
 A card is the `Jersey` component (an SVG shirt carrying the number) above a plate with the name and playing time.
