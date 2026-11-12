@@ -12,7 +12,8 @@ interface MatchHeaderProps {
   running: boolean;
   seconds: number;
   formattedTime: string;
-  onChangeScore: (index: 0 | 1, amount: number) => void;
+  onAddGoal: (index: 0 | 1) => void;
+  onEditScore: (index: 0 | 1) => void;
   onToggleClock: () => void;
   onEndMatch: () => void;
   onNewMatch: () => void;
@@ -33,7 +34,8 @@ export function MatchHeader({
   running,
   seconds,
   formattedTime,
-  onChangeScore,
+  onAddGoal,
+  onEditScore,
   onToggleClock,
   onEndMatch,
   onNewMatch,
@@ -120,14 +122,8 @@ export function MatchHeader({
         {renderSportMenu()}
       </div>
       <div className="team-score">
-        <div><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
-        <button disabled={!matchCreated} aria-label="Vähennä kotijoukkueen maalia" onClick={() => onChangeScore(0, -1)}>
-          <span className="score-minus-icon" aria-hidden="true" />
-        </button>
-        <b key={`home-score-${score[0]}`} className="score-value">{score[0]}</b>
-        <button disabled={!matchCreated} aria-label="Lisää kotijoukkueen maali" onClick={() => onChangeScore(0, 1)}>
-          <img className="add-icon" src="/assets/icon-add.svg" alt="" />
-        </button>
+        <div className="score-name"><span className="eyebrow">KOTI</span><strong>{homeName || "Uusi joukkue"}</strong></div>
+        <ScoreButton index={0} value={score[0]} teamName={homeName || "Kotijoukkue"} disabled={!matchCreated} onAddGoal={onAddGoal} onEditScore={onEditScore} />
       </div>
       <div className="match-clock">
         {matchCreated ? <span>{formattedTime}</span> : <span className="no-match-status">Ei aktiivista peliä</span>}
@@ -143,14 +139,8 @@ export function MatchHeader({
         )}
       </div>
       <div className="team-score away">
-        <div><span className="eyebrow">VIERAS</span><strong>{awayName || "Vierasjoukkue"}</strong></div>
-        <button disabled={!matchCreated} aria-label="Vähennä vierasjoukkueen maalia" onClick={() => onChangeScore(1, -1)}>
-          <span className="score-minus-icon" aria-hidden="true" />
-        </button>
-        <b key={`away-score-${score[1]}`} className="score-value">{score[1]}</b>
-        <button disabled={!matchCreated} aria-label="Lisää vierasjoukkueen maali" onClick={() => onChangeScore(1, 1)}>
-          <img className="add-icon" src="/assets/icon-add.svg" alt="" />
-        </button>
+        <div className="score-name"><span className="eyebrow">VIERAS</span><strong>{awayName || "Vierasjoukkue"}</strong></div>
+        <ScoreButton index={1} value={score[1]} teamName={awayName || "Vierasjoukkue"} disabled={!matchCreated} onAddGoal={onAddGoal} onEditScore={onEditScore} />
       </div>
       <a className="exercise-nav-link" href="#harjoitteet" onClick={onOpenExercises}>
         <ClipboardList size={16} aria-hidden="true" />
@@ -177,5 +167,70 @@ export function MatchHeader({
         <Settings size={19} aria-hidden="true" />
       </button>
     </header>
+  );
+}
+
+interface ScoreButtonProps {
+  index: 0 | 1;
+  value: number;
+  teamName: string;
+  disabled: boolean;
+  onAddGoal: (index: 0 | 1) => void;
+  onEditScore: (index: 0 | 1) => void;
+}
+
+const LONG_PRESS_MS = 480;
+
+// The score is the button: a tap adds a goal, a long press (or right click) opens the remove sheet.
+function ScoreButton({ index, value, teamName, disabled, onAddGoal, onEditScore }: ScoreButtonProps) {
+  const timerRef = useRef<number | undefined>(undefined);
+  const longPressedRef = useRef(false);
+  const startRef = useRef<[number, number] | null>(null);
+
+  const cancel = () => {
+    window.clearTimeout(timerRef.current);
+    startRef.current = null;
+  };
+
+  return (
+    <button
+      type="button"
+      className="score-button"
+      disabled={disabled}
+      aria-label={`${teamName}: ${value}. Lisää maali napauttamalla, poista pitkällä painalluksella.`}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        longPressedRef.current = false;
+        startRef.current = [event.clientX, event.clientY];
+        timerRef.current = window.setTimeout(() => {
+          longPressedRef.current = true;
+          navigator.vibrate?.(8);
+          onEditScore(index);
+        }, LONG_PRESS_MS);
+      }}
+      onPointerMove={(event) => {
+        const start = startRef.current;
+        if (start && Math.hypot(event.clientX - start[0], event.clientY - start[1]) > 10) cancel();
+      }}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        if (longPressedRef.current) return;
+        cancel();
+        longPressedRef.current = true;
+        onEditScore(index);
+      }}
+      onClick={() => {
+        if (longPressedRef.current) {
+          longPressedRef.current = false;
+          return;
+        }
+        onAddGoal(index);
+      }}
+    >
+      <b key={`score-${index}-${value}`} className="score-value">{value}</b>
+    </button>
   );
 }

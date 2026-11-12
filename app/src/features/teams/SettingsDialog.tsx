@@ -4,7 +4,7 @@ import { validateFormation } from "../../formation";
 import { FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "../../storage";
 import type { Formation, Player, PlayerId, Sport, Team, TeamSize } from "../../types";
 import { FieldUnitsEditor } from "../../components/FieldUnitsEditor";
-import { getSport } from "../../sports";
+import { getSport, SPORTS } from "../../sports";
 
 interface SettingsDialogProps {
   teams: Team[];
@@ -38,6 +38,7 @@ interface SettingsDialogProps {
   onUpdateFieldUnit: (id: string, name: string, playerIds: PlayerId[]) => void;
   onRemoveFieldUnit: (id: string) => void;
   sport: Sport;
+  onSportChange: (sport: Sport) => void;
 }
 
 export function SettingsDialog(props: SettingsDialogProps) {
@@ -49,7 +50,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
     onTeamNameDraftChange, onNewTeamNameChange, onNewPlayerNameChange,
     onNewFormationNameChange, onNewFormationTeamSizeChange, onAddTeam, onSaveTeamName, onRequestDeleteTeam,
     onUpdatePlayerNumber, onUpdatePlayerName, onRemovePlayer, onAddPlayer,
-    onRemoveFormation, onAddFormation, onAddFieldUnit, onUpdateFieldUnit, onRemoveFieldUnit, sport,
+    onRemoveFormation, onAddFormation, onAddFieldUnit, onUpdateFieldUnit, onRemoveFieldUnit, sport, onSportChange,
   } = props;
   const visibleFormations = formations.filter((item) => item.teamSize === newFormationTeamSize);
   const formationLimitReached = visibleFormations.length >= MAX_FORMATIONS_PER_TEAM_SIZE;
@@ -88,6 +89,12 @@ export function SettingsDialog(props: SettingsDialogProps) {
         </div>
         <div className="settings-layout">
           <aside className="team-settings">
+            {/* Teams are kept per sport, so the sport is chosen here, above the list it filters. */}
+            <div className="onboarding-sport-switch team-sport-switch" role="group" aria-label="Laji" style={{ gridTemplateColumns: `repeat(${SPORTS.length}, minmax(0, 1fr))` }}>
+              {SPORTS.map((item) => (
+                <button key={item.id} type="button" className={sport === item.id ? "active" : ""} aria-pressed={sport === item.id} onClick={() => onSportChange(item.id)}>{item.name}</button>
+              ))}
+            </div>
             <div className="team-list">
               {teams.map((item) => {
                 const isActive = item.id === teamId;

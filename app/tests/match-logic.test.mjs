@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyBatchSubstitution, changePlayerGoal, comparePlaytime, formatPitchPlayerName } from "../src/features/match/matchLogic.ts";
+import { applyBatchSubstitution, changePlayerGoal, comparePlaytime, creditScorer, formatPitchPlayerName, uncreditedGoals } from "../src/features/match/matchLogic.ts";
 
 test("applies a batch substitution only when incoming and outgoing counts match", () => {
   const lineup = [1, 2, 3, 4, 5];
@@ -48,4 +48,12 @@ test("keeps full short names and abbreviates long pitch-card names", () => {
   assert.equal(formatPitchPlayerName("Venla-Maria Korhonen"), "Venla-Maria K.");
   assert.equal(formatPitchPlayerName("Aleksanteri-Juhani"), "Aleksanteri-J.");
   assert.equal(formatPitchPlayerName("Maximilianuszbergson"), "Maximilianuszbe…");
+});
+
+test("credits a counted goal to a scorer without changing the score", () => {
+  const goals = creditScorer({ 7: 1 }, 7);
+  assert.deepEqual(goals, { 7: 2 });
+  assert.equal(uncreditedGoals([3, 1], 0, goals), 1);
+  assert.equal(uncreditedGoals([0, 3], 1, { 4: 1 }), 2);
+  assert.equal(uncreditedGoals([1, 0], 0, { 4: 2 }), 0);
 });

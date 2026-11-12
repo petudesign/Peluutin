@@ -61,3 +61,14 @@ export function formatPitchPlayerName(name: string): string {
 export function pitchNameLength(name: string): "short" | "medium" | "long" {
   return name.length <= 7 ? "short" : name.length <= 11 ? "medium" : "long";
 }
+
+/** Credits an already counted goal to a player, leaving the score as it is. */
+export function creditScorer(goals: Record<PlayerId, number>, playerId: PlayerId): Record<PlayerId, number> {
+  return { ...goals, [playerId]: (goals[playerId] || 0) + 1 };
+}
+
+/** Own goals that no player has been credited with, e.g. goals skipped in the scorer prompt. */
+export function uncreditedGoals(score: Score, ownScoreIndex: 0 | 1, goals: Record<PlayerId, number>): number {
+  const credited = Object.values(goals).reduce((sum, count) => sum + count, 0);
+  return Math.max(0, score[ownScoreIndex] - credited);
+}

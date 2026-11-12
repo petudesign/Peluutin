@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildMatchXlsx } from "./export.js";
 import { createFormation, reorderLineup, preferredFormation } from "./formation.js";
 import { cleanName, FORMATION_MAX_LENGTH, MAX_FORMATIONS_PER_TEAM_SIZE, NAME_MAX_LENGTH } from "./storage.js";
@@ -12,12 +12,13 @@ import { MatchWorkspace } from "./features/match/MatchWorkspace";
 import { NewMatchDialog } from "./features/match/NewMatchDialog";
 import { GamesDialog } from "./features/match/GamesDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { GoalSheet, type GoalPrompt } from "./components/GoalSheet";
 import { matchRepository } from "./data/matchRepository";
 import { SettingsDialog } from "./features/teams/SettingsDialog";
 import { AppSettingsDialog } from "./features/settings/AppSettingsDialog";
 import { AnalyticsView } from "./features/match/AnalyticsView";
 import { restoreExerciseBackup } from "./features/exercises/exerciseStorage";
-import { applyBatchSubstitution, changePlayerGoal } from "./features/match/matchLogic";
+import { applyBatchSubstitution, changePlayerGoal, creditScorer, uncreditedGoals } from "./features/match/matchLogic";
 import { isScheduledMatchVisible, scheduledStartError } from "./features/match/scheduledDate";
 import { analytics } from "./analytics";
 import type { PeluutinBackup } from "./data/backup";
@@ -97,6 +98,7 @@ export function App() {
   const [score, setScore] = useState<Score>(restoredMatch?.score || [0, 0]);
   const [minutes, setMinutes] = useState(restoredMatch?.minutes || Object.fromEntries((initialTeam?.players || []).map((p) => [p.id, 0])));
   const [goals, setGoals] = useState(restoredMatch?.goals || {});
+  const [goalPrompt, setGoalPrompt] = useState<GoalPrompt | null>(null);
   const [scheduledMatches, setScheduledMatches] = useState<ScheduledMatch[]>(initialScheduledMatches);
   const [activeScheduledMatchId, setActiveScheduledMatchId] = useState(restoredMatch?.scheduledMatchId);
   const sportTeams = teams.filter((team) => team.sport === sport);
@@ -738,6 +740,34 @@ export function App() {
     next[index] = Math.max(0, next[index] + amount);
     return next;
   });
+  const ownScoreIndex: 0 | 1 = venue === "home" ? 0 : 1;
+  const fieldPlayers = lineup.map((id) => byId[id]).filter(Boolean);
+  const goalkeeperId = lineup[slots.findIndex(([role]) => role === "MV")];
+  const closeGoalPrompt = useCallback(() => setGoalPrompt(null), []);
+  // A prompt belongs to the match it was opened in.
+  useEffect(() => { setGoalPrompt(null); }, [matchCreated, matchEnded, teamId, sport]);
+  // Tapping a score counts the goal at once. An own goal then asks who scored; any goal can be undone from the sheet.
+  const addGoal = (index: 0 | 1) => {
+    if (!matchCreated) return;
+    changeScore(index, 1);
+    navigator.vibrate?.(12);
+    const id = Date.now();
+    setGoalPrompt(index === ownScoreIndex && fieldPlayers.length ? { kind: "scorer", id } : { kind: "added", id, index });
+  };
+  const undoGoal = () => {
+    if (goalPrompt?.kind === "scorer") changeScore(ownScoreIndex, -1);
+    else if (goalPrompt?.kind === "added") changeScore(goalPrompt.index, -1);
+    setGoalPrompt(null);
+  };
+  const creditGoal = (playerId: PlayerId) => {
+    setGoals((current) => creditScorer(current, playerId));
+    setGoalPrompt(null);
+  };
+  const removeGoal = (index: 0 | 1, playerId: PlayerId | null) => {
+    if (playerId) changeGoal(playerId, -1);
+    else changeScore(index, -1);
+    setGoalPrompt(null);
+  };
   const saveTeamName = () => {
     updateSettingsTeam((team) => ({ ...team, name: cleanName(teamNameDraft) || team.name }));
   };
@@ -823,7 +853,8 @@ export function App() {
         running={running}
         seconds={seconds}
         formattedTime={formatTime(seconds)}
-        onChangeScore={changeScore}
+        onAddGoal={addGoal}
+        onEditScore={(index) => matchCreated && setGoalPrompt({ kind: "remove", id: Date.now(), index })}
         onToggleClock={() => setRunning((current) => {
           const next = !current;
           if (next) {
@@ -941,6 +972,24 @@ export function App() {
         />
       )}
 
+      {goalPrompt && matchCreated && (
+        <GoalSheet
+          prompt={goalPrompt}
+          score={score}
+          ownIndex={ownScoreIndex}
+          teamNames={[homeName || "Koti", awayName || "Vieras"]}
+          fieldPlayers={fieldPlayers}
+          benchPlayers={bench}
+          goalkeeperId={goalkeeperId}
+          goals={goals}
+          uncredited={uncreditedGoals(score, ownScoreIndex, goals)}
+          onCredit={creditGoal}
+          onUndo={undoGoal}
+          onRemove={removeGoal}
+          onClose={closeGoalPrompt}
+        />
+      )}
+
       {endMatchOpen && (
         <ConfirmDialog
           title={matchHasActivity ? "Lopetetaanko peli?" : "Poistetaanko käynnistämätön peli?"}
@@ -1035,6 +1084,7 @@ export function App() {
           onUpdateFieldUnit={updateFieldUnit}
           onRemoveFieldUnit={removeFieldUnit}
           sport={sport}
+          onSportChange={changeSport}
         />
       )}
       {appSettingsOpen && (
