@@ -71,6 +71,7 @@ export function saveSavedExercises(exercises: SavedExercise[]): void {
 
 export function exerciseDraftContentKey(draft: ExerciseDraft): string {
   return JSON.stringify({
+    court: draft.court,
     name: draft.name,
     notes: draft.notes,
     exerciseTheme: draft.exerciseTheme || "",

@@ -264,7 +264,8 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
 }
 /* Match header. Desktop is one row with each team name beside its score. On tablets and phones the names sit above
    the score controls. The brand and menu buttons are positioned outside the grid, which reserves room for them
-   through --topbar-start and --topbar-end. */
+   through --topbar-start and --topbar-end. Both sides reserve the wider of the two, so the score and clock stay
+   centred over the pitch below rather than shifting toward the narrower side. */
 .topbar {
   --topbar-start: max(250px, calc((100vw - 1440px) / 2 + 250px));
   --topbar-end: max(184px, calc((100vw - 1440px) / 2 + 184px));
@@ -276,7 +277,7 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   align-items: center;
   column-gap: 24px;
   height: 84px;
-  padding: 0 var(--topbar-end) 0 var(--topbar-start);
+  padding: 0 max(var(--topbar-start), var(--topbar-end));
   border-bottom: 1px solid var(--border-default);
   background: var(--surface-panel);
   transition: height 220ms var(--ease-out), background-color 220ms var(--ease-out);
@@ -642,8 +643,6 @@ button:focus-visible { outline: 3px solid #f3a712; outline-offset: 3px; }
   cursor: pointer;
 }
 .pregame-card > .pregame-secondary { margin-left: 8px; border: 1px solid var(--border-default); background: var(--surface-subtle); color: var(--text-primary); }
-.away { justify-content: flex-start; text-align: left; padding-left: 8px; }
-.away div { order: 4; margin: 0 0 0 10px; }
 .eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--text-muted); }
 .score-value { display: inline-block; }
 @keyframes score-bump {
@@ -2359,6 +2358,9 @@ input::-webkit-date-and-time-value { text-align: left; }
   font-size: 11px;
   line-height: 1.5;
 }
+/* A hint under a row of choices, such as the finish or facing note, sits clear of the buttons above it. */
+.exercise-option-row + .exercise-popover-copy,
+.exercise-curve-control + .exercise-popover-copy { margin-top: 10px; }
 .exercise-popover-copy strong {
   color: #fff;
 }
@@ -2938,6 +2940,9 @@ input::-webkit-date-and-time-value { text-align: left; }
   border-bottom: 1px solid rgba(154,190,207,.12);
   background: rgba(255,255,255,.018);
 }
+/* While a clip is dragged the lane under the pointer lights up, and an empty lane waits at the bottom for a new one. */
+.exercise-timeline-track.new-lane { background: repeating-linear-gradient(135deg, rgba(154,190,207,.05) 0 8px, transparent 8px 16px); }
+.exercise-timeline-track.drop-target { background: rgba(93,168,255,.14); box-shadow: inset 0 0 0 1px rgba(117,215,255,.45); }
 .exercise-timeline-clip {
   position: absolute;
   top: 4px;
@@ -3437,6 +3442,13 @@ button:active:not(:disabled) {
 .exercise-view-switch { width:68px; }
 .exercise-view-switch-thumb { width:calc((100% - 6px) / 2); }
 .exercise-view-switch.is-3d .exercise-view-switch-thumb { transform:translateX(100%); }
+/* The sport menu in the planner's top bar: one button with the current sport, opening a list of every sport. */
+.exercise-sport-control { position:relative; flex-shrink:0; }
+.exercise-sport-trigger { white-space:nowrap; }
+.exercise-share-menu.exercise-sport-menu { top:calc(100% + 6px); right:auto; left:0; z-index:40; width:180px; }
+.exercise-sport-menu button { justify-content:space-between; }
+.exercise-sport-menu button.active { color:#fff; background:rgba(20,98,207,.35); }
+[data-theme="light"] .exercise-sport-menu button.active { color:#17303a; background:rgba(20,98,207,.12); }
 .exercise-view-switch button,
 .exercise-view-switch button:active:not(:disabled),
 .exercise-speed-switch button,
@@ -3488,7 +3500,8 @@ button:active:not(:disabled) {
 }
 
 .exercise-pitch-style-options button { min-height: 44px; }
-.exercise-pitch-style-options button:last-child { grid-column: 1 / -1; }
+/* An odd one out spans the row, so two or three styles both fill it. */
+.exercise-pitch-style-options button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 
 .exercise-layers-panel { position:absolute; z-index:13; top:82px; left:18px; width:260px; max-height:calc(100% - 170px); display:flex; flex-direction:column; padding:13px; border:1px solid rgba(154,190,207,.22); border-radius:13px; background:rgba(13,34,45,.94); color:#e8f0f3; box-shadow:0 12px 32px rgba(0,0,0,.34); backdrop-filter:blur(14px); }

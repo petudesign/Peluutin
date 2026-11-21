@@ -1,4 +1,5 @@
 import { CirclePlus, Layers3, Route, Shapes, Trash2, Type, X } from "lucide-react";
+import { getExerciseCourt } from "./exerciseCourts";
 import type { ExerciseDraft, ExerciseLayerKind } from "./exerciseTypes";
 
 interface ExerciseLayersPanelProps {
@@ -12,7 +13,6 @@ interface ExerciseLayersPanelProps {
 }
 
 const shapeNames = { draw: "Vapaa piirto", line: "Viiva", arrow: "Nuoli", rectangle: "Suorakulmio", circle: "Ympyrä", text: "Teksti" };
-const routeNames = { pass: "Syöttö", run: "Juoksu", dribble: "Kuljetus", shot: "Veto" };
 
 export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, selectedAnnotationIds, onSelect, onRemove, onClose }: ExerciseLayersPanelProps) {
   const counts = new Map<string, number>();
@@ -35,7 +35,7 @@ export function ExerciseLayersPanel({ draft, selectedMarkerIds, selectedPathId, 
     {
       title: "Reitit", kind: "path" as const,
       items: draft.paths.map(path => ({
-        id: path.id, name: numbered(path.kind, routeNames[path.kind]),
+        id: path.id, name: numbered(path.kind, { pass: "Syöttö", run: "Juoksu", dribble: "Kuljetus", shot: getExerciseCourt(draft.court).shotLabel }[path.kind]),
         detail: `${draft.markers.find(marker => marker.id === path.fromId)?.name || "Lähtö"} → ${draft.markers.find(marker => marker.id === path.toId)?.name || "Kenttäkohta"}`,
         Icon: Route, selected: selectedPathId === path.id,
       })),
